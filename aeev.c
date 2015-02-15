@@ -1,19 +1,14 @@
 #include "Python.h"
 #include "stdio.h"
 
+#include "ops.h"
+
 static PyObject *
 hello_world(PyObject *self, PyObject *args)
 {
     return Py_BuildValue("s", "hello, world!");
 }
 
-#define SS_ADD  0
-#define SS_SUB  1
-#define SS_MUL  2
-#define SS_DIV  3
-#define S_NEGATE  4
-#define S_POW  5
-#define I_SCALAR  400
 
 double eval_double(PyObject *cell)
 {
@@ -39,7 +34,7 @@ double eval_double(PyObject *cell)
     case S_NEGATE:
         return -eval_double(PyTuple_GET_ITEM(cell, 1));
 
-    case S_POW:
+    case SS_POW:
         return pow(eval_double(PyTuple_GET_ITEM(cell, 1)),
                    eval_double(PyTuple_GET_ITEM(cell, 2)));
 

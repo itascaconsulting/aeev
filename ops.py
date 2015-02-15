@@ -1,48 +1,68 @@
 # operator codes
-ss_add = 0
-ss_sub = 1
-ss_mul = 2
-ss_div = 3
-s_negate = 4
-ss_pow = 5
 
-vv_add = 100
-vv_sub = 101
-vv_mul = 102
-vv_pow = 103
+# less than 500 returns scalar
 
-vs_add = 200
-vs_sub = 201
-vs_mul = 202
-vss_pow = 203
+op_hash = {
+    0 :     "ss_add",
+    1 :     "ss_sub",
+    2 :     "ss_mul",
+    3 :     "ss_div",
+    4 :     "s_negate",
+    5 :     "ss_pow",
+    6 :     "v_mag",
+    7 :     "v_x",
+    8 :     "v_y",
+    9 :     "v_z",
 
-sv_add = 300
-sv_sub = 301
-sv_mul = 302
-sv_pow = 303
+# values
 
-#v_mag
-#v_norm
+    10 :     "i_scalar",
+    11 :     "ia__scalar",
+    12 :     "p_scalar",
+    13 :     "pa_scalar",
 
-# value codes (unary)
-i_scalar = 400
-i_vector = 401
-ia_scalar = 402
-ia_vector = 403
+# proxies
 
-p_scalar = 500
-p_vector = 501
-pa_scalar = 502
-pa_vector = 503
+    100 :     "proxy_rad",
+
+#################
+###  vector stuff
+    #################
+
+    500 :     "vv_add",
+    501 :     "vv_sub",
+    502 :     "vv_mul",
+    503 :     "vv_pow",
+    504 :     "v_negate",
+
+    505 :     "vs_add",
+    506 :     "vs_sub",
+    507 :     "vs_mul",
+    508 :     "vs_pow",
+
+    509 :     "sv_add",
+    510 :     "sv_sub",
+    511 :     "sv_mul",
+    512 :     "sv_pow",
+
+    513 :     "v_norm",
+    600 :     "i_vector",
+    601 :     "ia_vector",
+    602 :     "p_vector",
+    603 :     "pa_vector",
 
 # proxy values
-proxy_vel = 600
-proxy_rad = 601
+    700 :     "proxy_vel",
+    701 :     "proxy_fapply",
+    702 :     "proxy_pos"}
 
-op_hash = {0 : "ss_add",
- 1 : "ss_sub",
- 2 : "ss_mul",
- 3 : "ss_div",
- 4 : "s_negate",
- 5 : "ss_pow",
- 400 : "i_scalar"}
+for k,v in op_hash.iteritems():
+    globals()[v]=k
+
+def _write_c_header():
+    with open("ops.h", "w") as f:
+        for k,v in op_hash.iteritems():
+            print >> f, "#define {} {}".format(v.upper(), k)
+
+if __name__ == '__main__':
+    _write_c_header()

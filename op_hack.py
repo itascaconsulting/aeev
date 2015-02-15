@@ -54,11 +54,16 @@ expr = (a + b)**c
 print expr
 print expr.get_tuple()
 print aeev.eval(expr.get_tuple())
+assert aeev.eval(expr.get_tuple()) == (1.0+3.0)**4.0
+
+expr = (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_tuple()
+assert aeev.eval(expr) == 42
 
 # 1+2
 expr = (ss_add, (i_scalar, 1.0), (i_scalar, 2.0))
 print expr
 print aeev.eval(expr)
+assert aeev.eval(expr) == 1.0+2.0
 
 # (1.23+5.0)**2 - 5e2/0.1
 expr = (ss_sub, (ss_pow, (ss_add, (i_scalar, 1.23), (i_scalar, 5.0)),
@@ -67,24 +72,4 @@ expr = (ss_sub, (ss_pow, (ss_add, (i_scalar, 1.23), (i_scalar, 5.0)),
 print expr, (1.23+5.0)**2 - 5e2/0.1
 
 print aeev.eval(expr)
-
-
-# example expression
-# Cd = 0.4
-# expr = (sv_mul,
-#         (i_scalar, Cd),
-#         (sv_mul,
-#          (ss_pow, (pa_scalar, proxy_rad), (i_scalar, 2.0)),
-#          (pa_vector, proxy_vel)))
-
-# print expr
-
-# evaluator:
-# loop over the ball container, i is the number in the sequence
-# i and bp are globals to start with (or passed everywhere)
-# take a tuple, first value is the operator rest are the arguments
-# c functions corresponding to the operators
-
-# eval_dvect (1 or 2, dv or scalar) -> v
-# eval_scalar(1 or 2, dv or scalar) -> s
-# recursively call these functions based on the function
+assert aeev.eval(expr) == (1.23+5.0)**2 - 5e2/0.1
