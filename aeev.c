@@ -1,6 +1,5 @@
 #include "Python.h"
 #include "stdio.h"
-// hello_world function.
 
 static PyObject *
 hello_world(PyObject *self, PyObject *args)
@@ -18,35 +17,34 @@ hello_world(PyObject *self, PyObject *args)
 
 double eval_double(PyObject *cell)
 {
-    int op_code = PyInt_AsLong(PyTuple_GetItem(cell,0));
+    int op_code = PyInt_AS_LONG(PyTuple_GET_ITEM(cell,0));
     switch (op_code){
 
     case SS_ADD:
-        return eval_double(PyTuple_GetItem(cell, 1)) +
-               eval_double(PyTuple_GetItem(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1)) +
+               eval_double(PyTuple_GET_ITEM(cell, 2));
 
     case SS_SUB:
-        return eval_double(PyTuple_GetItem(cell, 1)) -
-               eval_double(PyTuple_GetItem(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1)) -
+               eval_double(PyTuple_GET_ITEM(cell, 2));
 
     case SS_MUL:
-        return eval_double(PyTuple_GetItem(cell, 1)) *
-               eval_double(PyTuple_GetItem(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1)) *
+               eval_double(PyTuple_GET_ITEM(cell, 2));
 
     case SS_DIV:
-        return eval_double(PyTuple_GetItem(cell, 1)) /
-               eval_double(PyTuple_GetItem(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1)) /
+               eval_double(PyTuple_GET_ITEM(cell, 2));
 
     case S_NEGATE:
-        return -eval_double(PyTuple_GetItem(cell, 1));
+        return -eval_double(PyTuple_GET_ITEM(cell, 1));
 
     case S_POW:
-        return pow(eval_double(PyTuple_GetItem(cell, 1)),
-                   eval_double(PyTuple_GetItem(cell, 2)));
+        return pow(eval_double(PyTuple_GET_ITEM(cell, 1)),
+                   eval_double(PyTuple_GET_ITEM(cell, 2)));
 
     case I_SCALAR:
-        //PyFloat_Check()
-        return PyFloat_AsDouble(PyTuple_GetItem(cell, 1));
+        return PyFloat_AS_DOUBLE(PyTuple_GET_ITEM(cell, 1));
 
     default:
         printf("got %i \n", op_code);

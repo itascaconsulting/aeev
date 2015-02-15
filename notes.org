@@ -1,0 +1,5 @@
+working for doubles
+
+about 2x slower
+
+large constant time overhead
