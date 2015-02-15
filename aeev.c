@@ -1,5 +1,5 @@
 #include "Python.h"
-
+#include "stdio.h"
 // hello_world function.
 
 static PyObject *
@@ -11,22 +11,45 @@ hello_world(PyObject *self, PyObject *args)
 #define SS_ADD  0
 #define SS_SUB  1
 #define SS_MUL  2
-#define S_POW  3
+#define SS_DIV  3
+#define S_NEGATE  4
+#define S_POW  5
 #define I_SCALAR  400
 
 double eval_double(PyObject *cell)
 {
-    //PyInt_Check
     int op_code = PyInt_AsLong(PyTuple_GetItem(cell,0));
     switch (op_code){
-    case I_SCALAR:
-        return PyFloat_AsDouble(PyTuple_GetItem(cell, 1));
 
     case SS_ADD:
         return eval_double(PyTuple_GetItem(cell, 1)) +
                eval_double(PyTuple_GetItem(cell, 2));
 
+    case SS_SUB:
+        return eval_double(PyTuple_GetItem(cell, 1)) -
+               eval_double(PyTuple_GetItem(cell, 2));
+
+    case SS_MUL:
+        return eval_double(PyTuple_GetItem(cell, 1)) *
+               eval_double(PyTuple_GetItem(cell, 2));
+
+    case SS_DIV:
+        return eval_double(PyTuple_GetItem(cell, 1)) /
+               eval_double(PyTuple_GetItem(cell, 2));
+
+    case S_NEGATE:
+        return -eval_double(PyTuple_GetItem(cell, 1));
+
+    case S_POW:
+        return pow(eval_double(PyTuple_GetItem(cell, 1)),
+                   eval_double(PyTuple_GetItem(cell, 2)));
+
+    case I_SCALAR:
+        //PyFloat_Check()
+        return PyFloat_AsDouble(PyTuple_GetItem(cell, 1));
+
     default:
+        printf("got %i \n", op_code);
         PyErr_SetString(PyExc_ValueError, "unknown opcode");
         return 0.0;
     }

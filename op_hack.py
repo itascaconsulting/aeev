@@ -4,7 +4,9 @@ import numpy as np
 ss_add = 0
 ss_sub = 1
 ss_mul = 2
-s_pow = 3
+ss_div = 3
+s_negate = 4
+s_pow = 5
 
 vv_add = 100
 vv_sub = 101
@@ -36,21 +38,34 @@ pa_vector = 503
 proxy_vel = 600
 proxy_rad = 601
 
+# can we fully verify an expression before we pass it in?
+
+
 import aeev
 
+# 1+2
 expr = (ss_add, (i_scalar, 1.0), (i_scalar, 2.0))
 print expr
 print aeev.eval(expr)
 
-# example expression
-Cd = 0.4
-expr = (sv_mul,
-        (i_scalar, Cd),
-        (sv_mul,
-         (s_pow, (pa_scalar, proxy_rad), (i_scalar, 2.0)),
-         (pa_vector, proxy_vel)))
+# (1.23+5.0)**2 - 5e2/0.1
+expr = (ss_sub, (s_pow, (ss_add, (i_scalar, 1.23), (i_scalar, 5.0)),
+                 (i_scalar, 2.0)),
+        (ss_div, (i_scalar, 5e2), (i_scalar, 0.1)))
+print expr, (1.23+5.0)**2 - 5e2/0.1
 
-print expr
+print aeev.eval(expr)
+
+
+# example expression
+# Cd = 0.4
+# expr = (sv_mul,
+#         (i_scalar, Cd),
+#         (sv_mul,
+#          (s_pow, (pa_scalar, proxy_rad), (i_scalar, 2.0)),
+#          (pa_vector, proxy_vel)))
+
+# print expr
 
 # evaluator:
 # loop over the ball container, i is the number in the sequence
