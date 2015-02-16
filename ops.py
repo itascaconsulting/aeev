@@ -2,8 +2,10 @@
 
 # less than 500 returns scalar
 
+#ops of zero or less than zero are literal indicies
+
 op_hash = {
-    0 :     "ss_add",
+    14 :    "ss_add",
     1 :     "ss_sub",
     2 :     "ss_mul",
     3 :     "ss_div",

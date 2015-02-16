@@ -1,4 +1,4 @@
-#define SS_ADD 0
+#define SV_POW 512
 #define SS_SUB 1
 #define SS_MUL 2
 #define SS_DIV 3
@@ -12,7 +12,7 @@
 #define IA__SCALAR 11
 #define P_SCALAR 12
 #define PA_SCALAR 13
-#define SV_POW 512
+#define SS_ADD 14
 #define I_VECTOR 600
 #define IA_VECTOR 601
 #define V_NORM 513
