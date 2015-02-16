@@ -1,6 +1,6 @@
 from ops import *
-import aeev
 import array
+import numpy as np
 
 class lazy_expr(object):
     def __init__(self, data):
@@ -10,6 +10,8 @@ class lazy_expr(object):
             self.data = data.data
         elif isinstance(data, float) or isinstance(data, int):
             self.data = (i_scalar, float(data))
+        elif type(data) is np.ndarray:
+            self.data = (ia_scalar, data)
         else:
             raise ValueError("unknown type")
 
@@ -37,6 +39,8 @@ class lazy_expr(object):
 
     def get_tuple(self):
         if self.data[0] == i_scalar:
+            return self.data
+        elif self.data[0] == ia_scalar:
             return self.data
         else:
             if len(self.data) == 2:
@@ -67,51 +71,3 @@ class lazy_expr(object):
                 op_stack.append(op)
         visitor(top_cell, literal_stack, op_stack)
         return array.array("l", op_stack), array.array("d", literal_stack)
-
-
-
-
-a = lazy_expr(1.0)
-b = lazy_expr(3.0)
-c = lazy_expr(4.0)
-d = lazy_expr(16.0)
-e = lazy_expr(0.1)
-
-expr = (a + b + e)**c
-
-print expr
-print expr.get_tuple()
-print expr.get_bytecode()
-ops, literals = expr.get_bytecode()
-print aeev.vm_eval(ops, literals)
-
-print aeev.eval(expr.get_tuple())
-assert aeev.eval(expr.get_tuple()) == (1.0 + 3.0 + 0.1)**4.0
-
-expr = (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_tuple()
-print (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_bytecode()
-assert aeev.eval(expr) == 42
-
-expr = ((a+b)**lazy_expr(2) + e*(d**-e) + a/b) / c
-print expr
-print expr.get_tuple()
-print expr.get_bytecode()
-print aeev.eval(expr.get_tuple())
-res = ((1.0+3.0)**2 + 0.1*(16.0**-0.1) + 1.0/3.0) / 4.0
-assert aeev.eval(expr.get_tuple()) == res
-
-
-# 1+2
-expr = (ss_add, (i_scalar, 1.0), (i_scalar, 2.0))
-print expr
-print aeev.eval(expr)
-assert aeev.eval(expr) == 1.0+2.0
-
-# (1.23+5.0)**2 - 5e2/0.1
-expr = (ss_sub, (ss_pow, (ss_add, (i_scalar, 1.23), (i_scalar, 5.0)),
-                 (i_scalar, 2.0)),
-        (ss_div, (i_scalar, 5e2), (i_scalar, 0.1)))
-print expr, (1.23+5.0)**2 - 5e2/0.1
-
-print aeev.eval(expr)
-assert aeev.eval(expr) == (1.23+5.0)**2 - 5e2/0.1

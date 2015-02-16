@@ -1,6 +1,6 @@
 #include "Python.h"
+#include "numpy/noprefix.h"
 #include "stdio.h"
-
 #include "ops.h"
 
 static PyObject *
@@ -116,6 +116,14 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
 
 static PyObject *call_test(PyObject *self, PyObject *args)
 {
+    PyObject *par = PyTuple_GetItem(args, 0);
+    PyArrayObject *ar = (PyArrayObject *)PyArray_FROMANY(par,
+                                                         PyArray_DOUBLE,
+                                                         1,
+                                                         2,
+                                                         NPY_IN_ARRAY);
+    printf("got array len %i\n",PyArray_DIM(ar,0));
+
     return PyFloat_FromDouble(1.0);
 }
 
@@ -137,4 +145,5 @@ void
 initaeev(void)
 {
     Py_InitModule3("aeev", module_functions, "A minimal module.");
+    import_array();
 }

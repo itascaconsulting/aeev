@@ -19,7 +19,7 @@ op_hash = {
 # values
 
     10 :     "i_scalar",
-    11 :     "ia__scalar",
+    11 :     "ia_scalar",
     12 :     "p_scalar",
     13 :     "pa_scalar",
 

@@ -9,7 +9,7 @@
 #define V_Y 8
 #define V_Z 9
 #define I_SCALAR 10
-#define IA__SCALAR 11
+#define IA_SCALAR 11
 #define P_SCALAR 12
 #define PA_SCALAR 13
 #define SS_ADD 14

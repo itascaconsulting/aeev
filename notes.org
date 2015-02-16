@@ -3,3 +3,5 @@ working for doubles
 about 2x slower
 
 large constant time overhead
+
+just the function call overhead is 300 ns.
