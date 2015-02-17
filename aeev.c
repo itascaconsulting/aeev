@@ -143,15 +143,33 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
 
 static PyObject *call_test(PyObject *self, PyObject *args)
 {
-    PyObject *par = PyTuple_GetItem(args, 0);
-    PyArrayObject *ar = (PyArrayObject *)PyArray_FROMANY(par,
-                                                         PyArray_DOUBLE,
-                                                         1,
-                                                         2,
-                                                         NPY_IN_ARRAY);
-    printf("got array len %i\n",PyArray_DIM(ar,0));
+    int size=0;
+    int i=0;
+    PyArrayObject *ar0;
+    PyArrayObject *ar1;
+    PyArrayObject *ar2;
 
-    return PyFloat_FromDouble(1.0);
+    double *data0;
+    double *data1;
+    double *data2;
+
+    PyObject *par = PyTuple_GetItem(args, 0);
+    ar0 = (PyArrayObject *)PyArray_FROMANY(par, PyArray_DOUBLE, 1, 2, NPY_IN_ARRAY);
+    par = PyTuple_GetItem(args, 1);
+    ar1 = (PyArrayObject *)PyArray_FROMANY(par, PyArray_DOUBLE, 1, 2, NPY_IN_ARRAY);
+    par = PyTuple_GetItem(args, 2);
+    ar2 = (PyArrayObject *)PyArray_FROMANY(par, PyArray_DOUBLE, 1, 2, NPY_IN_ARRAY);
+
+    data0 = (double *)ar0->data;
+    data1 = (double *)ar1->data;
+    data2 = (double *)ar2->data;
+
+    size = PyArray_DIM(ar0,0);
+    for (i=0; i<size; i++) {
+        data2[i] = data0[i] + data1[i];
+    }
+
+    Py_RETURN_NONE;
 }
 
 
