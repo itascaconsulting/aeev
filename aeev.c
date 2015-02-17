@@ -99,29 +99,27 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
 static PyObject *vm_eval(PyObject *self, PyObject *args)
 {
     // input is a tuple (opcode)
-    Py_buffer ops;
-    Py_buffer literals;
+    PyObject *ops=0;
+    PyObject *literals=0;
+    int c_op=0;
     int n_opt=0;
-    int *c_ops=0;
-    double *c_literals = 0;
     int stack_pointer = 0; // points to available stack location
     double stack[32];
     int i;
 
-    if (!PyArg_ParseTuple(args, "z*z*", &ops, &literals))
+    if (!PyArg_ParseTuple(args, "OO", &ops, &literals))
         return NULL;
-    c_ops = (int *)ops.buf;
-    c_literals = (double *)literals.buf;
-    n_opt = ops.len/4;
-    //printf("got %i ops \n", n_opt);
+    if (! (PyTuple_Check(ops) && PyTuple_Check(literals)))
+        return NULL;
+    n_opt = PyTuple_GET_SIZE(ops);
     for (i=0; i<n_opt; i++) {
-        //printf("opcode: %i\n", c_ops[i]);
-        if (c_ops[i] <= 0) {
-            //printf("pushing %lf\n", c_literals[-c_ops[i]]);
-            stack[stack_pointer] = c_literals[-c_ops[i]];
+        c_op = PyInt_AS_LONG(PyTuple_GET_ITEM(ops, i));
+        if (c_op <= 0) {
+            stack[stack_pointer] = PyFloat_AS_DOUBLE(
+                PyTuple_GET_ITEM(literals, -c_op));
             stack_pointer++;
         } else {
-            switch (c_ops[i]) {
+            switch (c_op) {
             case SS_ADD:
                 stack[stack_pointer-2] = stack[stack_pointer-2] +
                                          stack[stack_pointer-1];
@@ -133,7 +131,6 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
                 stack_pointer--;
                 break;
             default:
-                //printf("got %i\n", c_ops[i]);
                 PyErr_SetString(PyExc_ValueError,
                                 "unknown opcode");
                 return NULL;
@@ -141,7 +138,6 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
             }
         }
     }
-
     return PyFloat_FromDouble(stack[0]);
 }
 

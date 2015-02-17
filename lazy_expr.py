@@ -70,4 +70,4 @@ class lazy_expr(object):
                     visitor(a, literal_stack, op_stack)
                 op_stack.append(op)
         visitor(top_cell, literal_stack, op_stack)
-        return array.array("l", op_stack), array.array("d", literal_stack)
+        return tuple(op_stack), tuple(literal_stack)

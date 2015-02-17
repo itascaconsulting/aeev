@@ -5,3 +5,10 @@ about 2x slower
 large constant time overhead
 
 just the function call overhead is 300 ns.
+
+sexp based array expression evaluator is about 5x slower than raw
+numpy
+
+vm vs sexp dead heat
+
+faster after removing the array.array

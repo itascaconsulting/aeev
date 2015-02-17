@@ -16,13 +16,16 @@ print expr.get_tuple()
 print expr.get_bytecode()
 ops, literals = expr.get_bytecode()
 print aeev.vm_eval(ops, literals)
-
-print aeev.eval(expr.get_tuple())
+tup = expr.get_tuple()
+print aeev.eval(tup)
 assert aeev.eval(expr.get_tuple()) == (1.0 + 3.0 + 0.1)**4.0
+assert aeev.vm_eval(ops, literals) == (1.0 + 3.0 + 0.1)**4.0
 
 expr = (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_tuple()
 print (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_bytecode()
 assert aeev.eval(expr) == 42
+ops, lits = (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_bytecode()
+assert aeev.vm_eval(ops, lits) == 42
 
 expr = ((a+b)**lazy_expr(2) + e*(d**-e) + a/b) / c
 print expr
