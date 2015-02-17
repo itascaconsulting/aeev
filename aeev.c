@@ -9,37 +9,40 @@ hello_world(PyObject *self, PyObject *args)
     return Py_BuildValue("s", "hello, world!");
 }
 
-
-double eval_double(PyObject *cell)
+double eval_double(PyObject *cell, int index)
 {
     int op_code = PyInt_AS_LONG(PyTuple_GET_ITEM(cell,0));
     switch (op_code){
 
     case SS_ADD:
-        return eval_double(PyTuple_GET_ITEM(cell, 1)) +
-               eval_double(PyTuple_GET_ITEM(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1), index) +
+               eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
     case SS_SUB:
-        return eval_double(PyTuple_GET_ITEM(cell, 1)) -
-               eval_double(PyTuple_GET_ITEM(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1), index) -
+               eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
     case SS_MUL:
-        return eval_double(PyTuple_GET_ITEM(cell, 1)) *
-               eval_double(PyTuple_GET_ITEM(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1), index) *
+               eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
     case SS_DIV:
-        return eval_double(PyTuple_GET_ITEM(cell, 1)) /
-               eval_double(PyTuple_GET_ITEM(cell, 2));
+        return eval_double(PyTuple_GET_ITEM(cell, 1), index) /
+               eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
     case S_NEGATE:
-        return -eval_double(PyTuple_GET_ITEM(cell, 1));
+        return -eval_double(PyTuple_GET_ITEM(cell, 1), index);
 
     case SS_POW:
-        return pow(eval_double(PyTuple_GET_ITEM(cell, 1)),
-                   eval_double(PyTuple_GET_ITEM(cell, 2)));
+        return pow(eval_double(PyTuple_GET_ITEM(cell, 1), index),
+                   eval_double(PyTuple_GET_ITEM(cell, 2), index));
 
     case I_SCALAR:
         return PyFloat_AS_DOUBLE(PyTuple_GET_ITEM(cell, 1));
+
+    case IA_SCALAR:
+        return ((double *)((PyArrayObject *)
+                           PyTuple_GET_ITEM(cell, 1))->data)[index];
 
     default:
         printf("got %i \n", op_code);
@@ -47,8 +50,6 @@ double eval_double(PyObject *cell)
         return 0.0;
     }
 }
-
-
 
 static PyObject *eval(PyObject *self, PyObject *args)
 {
@@ -61,9 +62,39 @@ static PyObject *eval(PyObject *self, PyObject *args)
                         "expected tuple");
         return NULL;
     }
-    return PyFloat_FromDouble(eval_double(cell));
+    return PyFloat_FromDouble(eval_double(cell, 0));
 }
 
+static PyObject *array_eval(PyObject *self, PyObject *args)
+{
+    // input is a tuple (opcode)
+    PyObject *cell=0;
+    PyObject *target=0;
+    int size=0;
+    int i=0;
+    PyArrayObject *ar;
+
+    if (!PyArg_ParseTuple(args, "OO", &cell, &target))
+        return NULL;
+    ar = (PyArrayObject *)PyArray_FROMANY(target,
+                                          PyArray_DOUBLE,
+                                          1,
+                                          2,
+                                          NPY_IN_ARRAY);
+    if (! ar) {
+        PyErr_SetString(PyExc_ValueError, "target array error");
+        return NULL;
+    }
+    if (!PyTuple_Check(cell)) {
+        PyErr_SetString(PyExc_ValueError, "expected tuple");
+        return NULL;
+    }
+    size = PyArray_DIM(ar,0);
+    for (i=0; i<size; i++){
+        ((double *)ar->data)[i] = eval_double(cell, i);
+    }
+    Py_RETURN_NONE;
+}
 
 static PyObject *vm_eval(PyObject *self, PyObject *args)
 {
@@ -129,11 +160,11 @@ static PyObject *call_test(PyObject *self, PyObject *args)
 
 
 // Module functions table.
-
 static PyMethodDef
 module_functions[] = {
     { "hello_world", hello_world, METH_VARARGS, "Say hello." },
     { "eval", eval, METH_VARARGS, "Say hello." },
+    { "array_eval", array_eval, METH_VARARGS, "Say hello." },
     { "vm_eval", vm_eval, METH_VARARGS, "Say hello." },
     { "call_test", call_test, METH_VARARGS, "Say hello." },
     { NULL }

@@ -52,3 +52,5 @@ arr = np.ones(1e6)
 f = lazy_expr(arr)
 expr = f+1
 print expr.get_tuple()
+target = np.zeros(1e6)
+print aeev.array_eval(expr.get_tuple(), target)
