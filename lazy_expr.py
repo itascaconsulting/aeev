@@ -2,7 +2,19 @@ from ops import *
 import array
 import numpy as np
 
+
 class lazy_expr(object):
+
+    # typecode constants
+    A_A = 0
+    A_S = 1
+    S_A = 2
+    S_S = 3
+
+    def typecode(left,right):
+        "returns 0, 1, 2 or 3 for a_a, a_s, s_a, s_s"
+        return left.is_scalar()*2 + right.is_scalar()
+
     def __init__(self, data):
         if isinstance(data, tuple):
             self.data = data
@@ -15,8 +27,39 @@ class lazy_expr(object):
         else:
             raise ValueError("unknown type")
 
+    def is_scalar(self):
+        "return true if this leaf should evaluate to a scalar"
+        if self.data[0] < 500:
+            return 1
+        return 0
+
     def __add__(self, other):
-        return lazy_expr((ss_add, self, lazy_expr(other)))
+        code = lazy_expr.typecode(self, other)
+        if code == lazy_expr.A_A:
+            return lazy_expr((a_a_add, self, lazy_expr(other)))
+        elif code == lazy_expr.A_S:
+            return lazy_expr((a_s_add, self, lazy_expr(other)))
+        elif code == lazy_expr.S_A:
+            return lazy_expr((s_a_add, self, lazy_expr(other)))
+        elif code == lazy_expr.S_S:
+            return lazy_expr((s_s_add, self, lazy_expr(other)))
+        else:
+            raise ValueError("AST generation error")
+
+    def __radd__(self, other):
+        code = lazy_expr.typecode(other, self)
+        if code == lazy_expr.A_A:
+            return lazy_expr((a_a_add, lazy_expr(other), self))
+        elif code == lazy_expr.A_S:
+            return lazy_expr((a_s_add, lazy_expr(other), self))
+        elif code == lazy_expr.S_A:
+            return lazy_expr((s_a_add, lazy_expr(other), self))
+        elif code == lazy_expr.S_S:
+            return lazy_expr((s_s_add, lazy_expr(other), self))
+        else:
+            raise ValueError("AST generation error")
+
+
 
     def __sub__(self, other):
         return lazy_expr((ss_sub, self, lazy_expr(other)))

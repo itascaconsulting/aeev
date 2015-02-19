@@ -4,59 +4,96 @@
 
 #ops of zero or less than zero are literal indicies
 
+class OpCounter(object):
+    def __init__(self,n=0):
+        self.n = n-1
+    def __call__(self, n=None):
+        if not n is None:
+            self.n = n-1
+        self.n += 1
+        return self.n
+
+s_counter = OpCounter(200)
+a_counter = OpCounter(500)
+
+
 op_hash = {
-    14 :    "ss_add",
-    1 :     "ss_sub",
-    2 :     "ss_mul",
-    3 :     "ss_div",
-    4 :     "s_negate",
-    5 :     "ss_pow",
-    6 :     "v_mag",
-    7 :     "v_x",
-    8 :     "v_y",
-    9 :     "v_z",
+
+    # +
+    s_counter() :     "s_s_add",
+    a_counter() :     "s_a_add",
+    a_counter() :     "a_a_add",
+
+    # -
+    s_counter() :     "s_s_sub",
+    a_counter() :     "s_a_sub",
+    a_counter() :     "a_s_sub",
+    a_counter() :     "a_a_sub",
+
+    # *
+    s_counter() :     "s_s_mul",
+    a_counter() :     "a_s_mul",
+    a_counter() :     "a_a_mul",
+
+    # /
+    s_counter() :     "s_s_div",
+
+    # unary -
+    s_counter() :     "s_negate",
+    a_counter() :     "a_negate",
+
+    # **
+    s_counter() :     "s_s_pow",
+    a_counter() :     "a_s_pow",
 
 # values
 
-    10 :     "i_scalar",
-    11 :     "ia_scalar",
-    12 :     "p_scalar",
-    13 :     "pa_scalar",
+    s_counter() :     "i_scalar",
+    a_counter() :     "ia_scalar",
+    # s_counter() :     "p_scalar",
+    # a_counter() :     "pa_scalar",
 
 # proxies
 
-    100 :     "proxy_rad",
+    #counter() :     "proxy_rad",
 
 #################
 ###  vector stuff
-    #################
+#################
 
-    500 :     "vv_add",
-    501 :     "vv_sub",
-    502 :     "vv_mul",
-    503 :     "vv_pow",
-    504 :     "v_negate",
+    # counter() :     "v_mag",
+    # counter() :     "v_x",
+    # counter() :     "v_y",
+    # counter() :     "v_z",
 
-    505 :     "vs_add",
-    506 :     "vs_sub",
-    507 :     "vs_mul",
-    508 :     "vs_pow",
 
-    509 :     "sv_add",
-    510 :     "sv_sub",
-    511 :     "sv_mul",
-    512 :     "sv_pow",
+#     counter(500) :     "vv_add",
+#     counter() :     "vv_sub",
+#     counter() :     "vv_mul",
+#     counter() :     "vv_pow",
+#     counter() :     "v_negate",
 
-    513 :     "v_norm",
-    600 :     "i_vector",
-    601 :     "ia_vector",
-    602 :     "p_vector",
-    603 :     "pa_vector",
+#     counter() :     "vs_add",
+#     counter() :     "vs_sub",
+#     counter() :     "vs_mul",
+#     counter() :     "vs_pow",
 
-# proxy values
-    700 :     "proxy_vel",
-    701 :     "proxy_fapply",
-    702 :     "proxy_pos"}
+#     counter() :     "sv_add",
+#     counter() :     "sv_sub",
+#     counter() :     "sv_mul",
+#     counter() :     "sv_pow",
+
+#     counter() :     "v_norm",
+#     counter() :     "i_vector",
+#     counter() :     "ia_vector",
+#     counter() :     "p_vector",
+#     counter() :     "pa_vector",
+
+# # proxy values
+#     counter() :     "proxy_vel",
+#     counter() :     "proxy_fapply",
+#     counter() :     "proxy_pos"
+}
 
 for k,v in op_hash.iteritems():
     globals()[v]=k
