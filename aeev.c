@@ -14,28 +14,28 @@ double eval_double(PyObject *cell, int index)
     int op_code = PyInt_AS_LONG(PyTuple_GET_ITEM(cell,0));
     switch (op_code){
 
-    case SS_ADD:
+    case A_A_ADD: case A_S_ADD: case S_A_ADD: case S_S_ADD:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) +
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case SS_SUB:
+    case A_A_SUB: case A_S_SUB: case S_A_SUB: case S_S_SUB:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) -
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case SS_MUL:
+    case A_A_MUL: case A_S_MUL: case S_A_MUL: case S_S_MUL:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) *
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case SS_DIV:
+    case A_A_DIV: case A_S_DIV: case S_A_DIV: case S_S_DIV:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) /
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case S_NEGATE:
-        return -eval_double(PyTuple_GET_ITEM(cell, 1), index);
-
-    case SS_POW:
+    case A_A_POW: case A_S_POW: case S_A_POW: case S_S_POW:
         return pow(eval_double(PyTuple_GET_ITEM(cell, 1), index),
                    eval_double(PyTuple_GET_ITEM(cell, 2), index));
+
+    case A_NEGATE: case S_NEGATE:
+        return -eval_double(PyTuple_GET_ITEM(cell, 1), index);
 
     case I_SCALAR:
         return PyFloat_AS_DOUBLE(PyTuple_GET_ITEM(cell, 1));
@@ -114,18 +114,18 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
     n_opt = PyTuple_GET_SIZE(ops);
     for (i=0; i<n_opt; i++) {
         c_op = PyInt_AS_LONG(PyTuple_GET_ITEM(ops, i));
-        if (c_op <= 0) {
+        if (c_op & SCALAR_BIT) {
             stack[stack_pointer] = PyFloat_AS_DOUBLE(
-                PyTuple_GET_ITEM(literals, -c_op));
+                PyTuple_GET_ITEM(literals, c_op & ~SCALAR_BIT));
             stack_pointer++;
         } else {
             switch (c_op) {
-            case SS_ADD:
+            case A_A_ADD: case A_S_ADD: case S_A_ADD: case S_S_ADD:
                 stack[stack_pointer-2] = stack[stack_pointer-2] +
                                          stack[stack_pointer-1];
                 stack_pointer--;
                 break;
-            case SS_POW:
+            case A_A_POW: case A_S_POW: case S_A_POW: case S_S_POW:
                 stack[stack_pointer-2] = pow(stack[stack_pointer-2],
                                              stack[stack_pointer-1]);
                 stack_pointer--;

@@ -2,16 +2,6 @@ from lazy_expr import lazy_expr
 from ops import *
 import numpy as np
 
-a=lazy_expr(1.0)
-_b = np.ones(3)
-b=lazy_expr(_b)
-
-assert (a+2).get_tuple() == (s_s_add, (i_scalar, 1), (i_scalar, 2))
-assert (a+b).get_tuple() == (s_a_add, (i_scalar, 1), (ia_scalar, _b))
-assert (a+b**2).get_tuple() == (s_a_add,
-                                (i_scalar, 1.0 ),
-                                (a_s_pow, (ia_scalar, _b),
-                                 (i_scalar, 2.0)))
 
 def dis(opcodes, doubles, arrays):
     print
@@ -45,6 +35,9 @@ def dis(opcodes, doubles, arrays):
     for i,a in enumerate(arrays):
         print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
 
+a=lazy_expr(1.0)
+_b = np.ones(3)
+b=lazy_expr(_b)
 
 
 expr = (a+b**2)+22.2

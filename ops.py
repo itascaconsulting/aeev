@@ -51,8 +51,11 @@ op_hash = {
     a_counter(240) : "a_negate",
     s_counter(243) : "s_negate",
 
-# values
+# masks
+    1 << 12 : "scalar_bit",
+    1 << 11 : "array_scalar_bit",
 
+# values
     a_counter(260) : "ia_scalar",
     s_counter(563) : "i_scalar",
     # s_counter() :     "p_scalar",
@@ -104,12 +107,11 @@ for k,v in op_hash.iteritems():
     globals()[v]=k
 
 def _write_c_header():
+    print "writing opcodes to c header file"
     with open("ops.h", "w") as f:
         for k,v in op_hash.iteritems():
             print >> f, "#define {} {}".format(v.upper(), k)
 
-scalar_bit = 1 << 12
-array_scalar_bit = 1 << 11
 
 
 if __name__ == '__main__':

@@ -1,9 +1,11 @@
+#define SCALAR_BIT 4096
 #define S_S_SUB 513
 #define IA_SCALAR 260
 #define S_S_MUL 523
 #define S_S_DIV 533
 #define S_S_POW 553
 #define I_SCALAR 563
+#define ARRAY_SCALAR_BIT 2048
 #define A_A_ADD 200
 #define A_S_ADD 201
 #define S_A_ADD 202
