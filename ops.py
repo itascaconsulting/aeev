@@ -16,40 +16,45 @@ class OpCounter(object):
 s_counter = OpCounter(200)
 a_counter = OpCounter(500)
 
-
 op_hash = {
-
     # +
-    s_counter() :     "s_s_add",
-    a_counter() :     "s_a_add",
-    a_counter() :     "a_a_add",
+    a_counter(200) : "a_a_add",
+    a_counter() :    "a_s_add",
+    a_counter() :    "s_a_add",
+    s_counter(503) : "s_s_add",
 
     # -
-    s_counter() :     "s_s_sub",
-    a_counter() :     "s_a_sub",
-    a_counter() :     "a_s_sub",
-    a_counter() :     "a_a_sub",
+    a_counter(210) : "a_a_sub",
+    a_counter() :    "a_s_sub",
+    a_counter() :    "s_a_sub",
+    s_counter(513) : "s_s_sub",
 
     # *
-    s_counter() :     "s_s_mul",
-    a_counter() :     "a_s_mul",
-    a_counter() :     "a_a_mul",
+    a_counter(220) : "a_a_mul",
+    a_counter() :    "a_s_mul",
+    a_counter() :    "s_a_mul",
+    s_counter(523) : "s_s_mul",
 
     # /
-    s_counter() :     "s_s_div",
-
-    # unary -
-    s_counter() :     "s_negate",
-    a_counter() :     "a_negate",
+    a_counter(230) : "a_a_div",
+    a_counter() :    "a_s_div",
+    a_counter() :    "s_a_div",
+    s_counter(533) : "s_s_div",
 
     # **
-    s_counter() :     "s_s_pow",
-    a_counter() :     "a_s_pow",
+    a_counter(250) : "a_a_pow",
+    a_counter() :    "a_s_pow",
+    a_counter() :    "s_a_pow",
+    s_counter(553) : "s_s_pow",
+
+    # unary -
+    a_counter(240) : "a_negate",
+    s_counter(243) : "s_negate",
 
 # values
 
-    s_counter() :     "i_scalar",
-    a_counter() :     "ia_scalar",
+    a_counter(260) : "ia_scalar",
+    s_counter(563) : "i_scalar",
     # s_counter() :     "p_scalar",
     # a_counter() :     "pa_scalar",
 
@@ -102,6 +107,10 @@ def _write_c_header():
     with open("ops.h", "w") as f:
         for k,v in op_hash.iteritems():
             print >> f, "#define {} {}".format(v.upper(), k)
+
+scalar_bit = 1 << 12
+array_scalar_bit = 1 << 11
+
 
 if __name__ == '__main__':
     _write_c_header()
