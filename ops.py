@@ -52,8 +52,11 @@ op_hash = {
     s_counter(243) : "s_negate",
 
 # masks
-    1 << 12 : "scalar_bit",
     1 << 11 : "array_scalar_bit",
+    1 << 12 : "scalar_bit",
+    1 << 13 : "result_to_target",
+    1 << 14 : "left_on_heap",
+    1 << 15 : "right_on_heap",
 
 # values
     a_counter(260) : "ia_scalar",

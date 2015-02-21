@@ -3,12 +3,6 @@
 #include "stdio.h"
 #include "ops.h"
 
-static PyObject *
-hello_world(PyObject *self, PyObject *args)
-{
-    return Py_BuildValue("s", "hello, world!");
-}
-
 double eval_double(PyObject *cell, int index)
 {
     int op_code = PyInt_AS_LONG(PyTuple_GET_ITEM(cell,0));
@@ -96,6 +90,23 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+
+static PyObject *array_vm_eval(PyObject *self, PyObject *args)
+{
+    // opcodes             np array of integers
+    // double literals     np array of doubles
+    // array literals      tuple of np arrays
+    // target array        np array of doubles
+    //PyArray_CheckExact
+    #PyArray_IS_C_CONTIGUOUS
+    #PyArray_SAMESHAPE
+    double array_stack[8][CHUNK_SIZE];
+
+
+    target[i] = left_operand[j] + right_operand[k];
+    Py_RETURN_NONE;
+}
+
 static PyObject *vm_eval(PyObject *self, PyObject *args)
 {
     // input is a tuple (opcode)
@@ -134,7 +145,6 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
                 PyErr_SetString(PyExc_ValueError,
                                 "unknown opcode");
                 return NULL;
-
             }
         }
     }
@@ -220,10 +230,10 @@ static PyObject *call_test(PyObject *self, PyObject *args)
 // Module functions table.
 static PyMethodDef
 module_functions[] = {
-    { "hello_world", hello_world, METH_VARARGS, "Say hello." },
     { "eval", eval, METH_VARARGS, "Say hello." },
     { "array_eval", array_eval, METH_VARARGS, "Say hello." },
     { "vm_eval", vm_eval, METH_VARARGS, "Say hello." },
+    { "array_vm_eval", array_vm_eval, METH_VARARGS, "Say hello." }
     { "call_test", call_test, METH_VARARGS, "Say hello." },
     { "call_test_chunk", call_test_chunk, METH_VARARGS, "Say hello." },
     { NULL }
