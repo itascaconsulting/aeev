@@ -18,8 +18,8 @@ ops, literals, arrays = expr.get_bytecode()
 print aeev.vm_eval(ops, literals)
 tup = expr.get_tuple()
 print aeev.eval(tup)
-assert aeev.eval(expr.get_tuple()) == (1.0 + 3.0 + 0.1)**4.0
-assert aeev.vm_eval(ops, literals) == (1.0 + 3.0 + 0.1)**4.0
+np.testing.assert_allclose(aeev.eval(expr.get_tuple()), (1.0 + 3.0 + 0.1)**4.0)
+np.testing.assert_allclose(aeev.vm_eval(ops, literals), (1.0 + 3.0 + 0.1)**4.0)
 
 expr = (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_tuple()
 print (a+a+a+a+a+a+b+b+b+c+c+c+c+c+a+a+a+a+a+a+a).get_bytecode()
