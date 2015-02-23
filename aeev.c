@@ -59,6 +59,8 @@ static PyObject *eval(PyObject *self, PyObject *args)
     return PyFloat_FromDouble(eval_double(cell, 0));
 }
 
+#define CHUNK_SIZE 256
+
 static PyObject *array_eval(PyObject *self, PyObject *args)
 {
     // input is a tuple (opcode)
@@ -93,49 +95,131 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
 
 static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 {
-    // opcodes             np array of integers
-    // double literals     np array of doubles
-    // array literals      tuple of np arrays
-    // target array        np array of doubles
-    //PyArray_CheckExact
-    //PyArray_DESCR
-    //PyArray_ISFLOAT
-    //PyArray_IS_C_CONTIGUOUS
-    //PyArray_SAMESHAPE
     PyObject *opcodes=0;
     PyObject *double_literals=0;
     PyObject *array_literals=0;
     PyObject *target=0;
+    double *c_double_literals=0;
+    int alstack[16];
+    double astack[8][CHUNK_SIZE];
+    double dstack[16];
+    int dstack_ptr=0;
+    int astack_ptr=0;
+    int alstack_ptr=0;
     int nops=0;
     int i=0;
     long *c_opcodes=0;
-    if (!PyArg_ParseTuple(args, "OOOO", &opcodes, &double_literals
-                          &array_literals, &target))
-        return NULL;
+    double *c_target=0;
+    int array_size=0;
+    if (!PyArg_ParseTuple(args, "OOOO", &opcodes, &double_literals,
+                          &array_literals, &target)) return NULL;
     if ( (! PyArray_CheckExact(opcodes)) ||
          (! PyArray_ISINTEGER((PyArrayObject *)opcodes))  ||
          (! PyArray_IS_C_CONTIGUOUS((PyArrayObject *)opcodes)) ||
          (! PyArray_NDIM((PyArrayObject *)opcodes) == 1)) {
         PyErr_SetString(PyExc_ValueError, "opcodes should be 1d contiguous array of type int");
+        return NULL;
     }
     nops = PyArray_DIM((PyArrayObject *)opcodes, 0);
-    c_opcodes = ((PyArrayObject *)opcodes)->data;
+    c_opcodes = (long *)((PyArrayObject *)opcodes)->data;
 
     if ( (! PyArray_CheckExact(double_literals)) ||
          (! PyArray_ISFLOAT((PyArrayObject *)double_literals))  ||
          (! PyArray_IS_C_CONTIGUOUS((PyArrayObject *)double_literals)) ||
          (! PyArray_NDIM((PyArrayObject *)double_literals) == 1)) {
         PyErr_SetString(PyExc_ValueError, "double_literals should be 1d contiguous array of type float");
+        return NULL;
     }
 
-    double *c_double_literals=0;
+    if ( (! PyArray_CheckExact(target)) ||
+         (! PyArray_ISFLOAT((PyArrayObject *)target))  ||
+         (! PyArray_IS_C_CONTIGUOUS((PyArrayObject *)target)) ||
+         (! PyArray_NDIM((PyArrayObject *)target) == 1)) {
+        PyErr_SetString(PyExc_ValueError, "target should be 1d contiguous array of type float");
+        return NULL;
+    }
+    array_size = PyArray_DIM((PyArrayObject *)target, 0);
+    c_target = PyArray_DATA((PyArrayObject *)target);
+
+    if (!PyTuple_Check(array_literals)) {
+        PyErr_SetString(PyExc_ValueError, "array_literals should be tuple of contiguous arrays of type float, all the same shape.");
+        return NULL;
+    }
+
+    c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
+
+    for (i=0; i<nops; i++) {
+        int result_target = 0;
+        int left_heap = 0;
+        int right_heap = 0;
+        long op = c_opcodes[i];
+
+        if (op & SCALAR_BIT) {
+            dstack[dstack_ptr] = c_double_literals[op & ~SCALAR_BIT];
+            dstack_ptr++;
+        }
+        else if (op & ARRAY_SCALAR_BIT) {
+            alstack[alstack_ptr] = op & ~ARRAY_SCALAR_BIT;
+            alstack_ptr++;
+        }
+        else  // normal op
+        {
+            if (op & RESULT_TO_TARGET) {
+                result_target = 1;
+                op &= ~RESULT_TO_TARGET;
+            }
+            if (op & RIGHT_ON_HEAP) {
+                right_heap = 1;
+                op &= ~RIGHT_ON_HEAP;
+            }
+            if (op & LEFT_ON_HEAP) {
+                left_heap = 1;
+                op &= ~LEFT_ON_HEAP;
+            }
+            printf("opcode %i %i \n", op, c_opcodes[i]);
+            switch (op) {
+            case A_A_ADD: {
+                // establish where data is coming from and going to.
+                /* double *res=0; */
+                /* double *a = 0; */
+                /* double *b = 0; */
+                /* if (result_target) res = target; */
+                /* else res = astack[astack_ptr]; */
+
+                /* if (left_heap) { */
+                /*     a = (double *) */
+                /*         PyArray_DATA((PyArrayObject *) */
+                /*                      PyTuple_GET_ITEM( */
+                /*                          array_literals, */
+                /*                          alstack[alstack_ptr])); */
+                /* } */
+                /* else a = astack */
+
+                /* for (j=0; j<array_size; j++) { */
+                /*     res[j] = a[j] + b[j]; */
+                /* } */
+                break;
+            }
+                break;
+            case A_S_ADD:
+                break;
+            case S_A_ADD:
+                break;
+            case S_S_ADD:
+                break;
+
+
+            }
+
+        }
+
+        printf("opcode %i\n", c_opcodes[i]);
+    }
 
 
 
-    double array_stack[8][CHUNK_SIZE];
 
-
-    target[i] = left_operand[j] + right_operand[k];
+    //target[i] = left_operand[j] + right_operand[k];
     Py_RETURN_NONE;
 }
 
@@ -183,7 +267,7 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
     return PyFloat_FromDouble(stack[0]);
 }
 
-#define CHUNK_SIZE 256
+
 
 static PyObject *call_test_chunk(PyObject *self, PyObject *args)
 {
@@ -265,7 +349,7 @@ module_functions[] = {
     { "eval", eval, METH_VARARGS, "Say hello." },
     { "array_eval", array_eval, METH_VARARGS, "Say hello." },
     { "vm_eval", vm_eval, METH_VARARGS, "Say hello." },
-    { "array_vm_eval", array_vm_eval, METH_VARARGS, "Say hello." }
+    { "array_vm_eval", array_vm_eval, METH_VARARGS, "Say hello." },
     { "call_test", call_test, METH_VARARGS, "Say hello." },
     { "call_test_chunk", call_test_chunk, METH_VARARGS, "Say hello." },
     { NULL }

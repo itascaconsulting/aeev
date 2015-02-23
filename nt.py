@@ -67,3 +67,10 @@ dis(opcodes, doubles, arrays)
 print
 
 dis(*(b**2+b).get_bytecode())
+
+aops = np.array(opcodes, dtype=int)
+adou = np.array(doubles)
+target = np.zeros_like(_b)
+
+import aeev
+aeev.array_vm_eval(aops, adou, arrays, target)
