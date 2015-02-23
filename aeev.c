@@ -98,8 +98,40 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     // array literals      tuple of np arrays
     // target array        np array of doubles
     //PyArray_CheckExact
-    #PyArray_IS_C_CONTIGUOUS
-    #PyArray_SAMESHAPE
+    //PyArray_DESCR
+    //PyArray_ISFLOAT
+    //PyArray_IS_C_CONTIGUOUS
+    //PyArray_SAMESHAPE
+    PyObject *opcodes=0;
+    PyObject *double_literals=0;
+    PyObject *array_literals=0;
+    PyObject *target=0;
+    int nops=0;
+    int i=0;
+    long *c_opcodes=0;
+    if (!PyArg_ParseTuple(args, "OOOO", &opcodes, &double_literals
+                          &array_literals, &target))
+        return NULL;
+    if ( (! PyArray_CheckExact(opcodes)) ||
+         (! PyArray_ISINTEGER((PyArrayObject *)opcodes))  ||
+         (! PyArray_IS_C_CONTIGUOUS((PyArrayObject *)opcodes)) ||
+         (! PyArray_NDIM((PyArrayObject *)opcodes) == 1)) {
+        PyErr_SetString(PyExc_ValueError, "opcodes should be 1d contiguous array of type int");
+    }
+    nops = PyArray_DIM((PyArrayObject *)opcodes, 0);
+    c_opcodes = ((PyArrayObject *)opcodes)->data;
+
+    if ( (! PyArray_CheckExact(double_literals)) ||
+         (! PyArray_ISFLOAT((PyArrayObject *)double_literals))  ||
+         (! PyArray_IS_C_CONTIGUOUS((PyArrayObject *)double_literals)) ||
+         (! PyArray_NDIM((PyArrayObject *)double_literals) == 1)) {
+        PyErr_SetString(PyExc_ValueError, "double_literals should be 1d contiguous array of type float");
+    }
+
+    double *c_double_literals=0;
+
+
+
     double array_stack[8][CHUNK_SIZE];
 
 
