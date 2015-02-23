@@ -153,7 +153,7 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     }
 
     c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
-    // outer loop / i
+    for (i=0; i<outside_loops; i++)
     for (j=0; j<nops; j++) {
         int result_target = 0;
         int left_heap = 0;
@@ -173,31 +173,27 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
         else  // normal op
         {
             double *res=0;
-            double *a = 0;
-            double *b = 0;
+            double *a = 0; // left
+            double *b = 0; // right
 
             if (op & RESULT_TO_TARGET) {
                 result_target = 1;
-                res = target;
+                res = target+i*CHUNK_SIZE;
             }
             else {
-                res = astack[astack_ptr];
-            }
-            if (op & RIGHT_ON_HEAP) {
-                right_heap = 1;
+                res = astack[astack_ptr-1];
             }
             if (op & LEFT_ON_HEAP) {
                 left_heap = 1;
+            }
+            if (op & RIGHT_ON_HEAP) {
+                right_heap = 1;
             }
             op &= ~BYTECODE_MASK;
 
             printf("opcode %l %i \n", op, c_opcodes[j]);
             switch (op) {
             case A_A_ADD: {
-                // establish where data is coming from and going to.
-                /* if (result_target) res = target; */
-                /* else res = astack[astack_ptr]; */
-
                 /* if (left_heap) { */
                 /*     a = (double *) */
                 /*         PyArray_DATA((PyArrayObject *) */
