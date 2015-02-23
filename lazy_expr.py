@@ -89,8 +89,17 @@ class lazy_expr(object):
         # on the heap or stack.
 
         def scalar_op(opcode):
-            assert type(opcode) is int
+            assert type(opcode & ~bytecode_mask) is int
             return '3' == str(opcode)[-1]
+
+        def left_is_array(opcode):
+            char = str(opcode & ~bytecode_mask)[-1]
+            return char == '0' or char == '1'
+
+        def right_is_array(opcode):
+            char = str(opcode & ~bytecode_mask)[-1]
+            return char == '0' or char == '2'
+
 
         def listit(t):
             """Convert nested tuples into nested lists"""
@@ -98,30 +107,29 @@ class lazy_expr(object):
 
         top_cell = listit(self.get_tuple())
 
-        if not scalar_op(top_cell[0]):
-            top_cell[0] |= result_to_target;
-
         def opt_visitor(cell):
+            """Add bits to bytecodes"""
             op, args = cell[0], cell[1:]
-            if scalar_op(op & ~result_to_target):
+            if scalar_op(op) or op == i_scalar or op == ia_scalar:
                 return
-            # if the left operand is an array literal
-            # then set the read from heap bit
-            if op == i_scalar:
-                return
-            if op == ia_scalar:
-                return
+            flags = 0
             if args[0][0] == ia_scalar:
-                print "inplace l"
-                cell[0] |= left_on_heap
+                flags |= left_on_heap
             if len(args) == 2:
                 if args[1][0] == ia_scalar:
-                    print "inplace r"
-                    cell[0] |= right_on_heap
+                    flags |= right_on_heap
+            if left_is_array(op): flags |= left_array
+            if right_is_array(op): flags |= right_array
+            cell[0] |= flags
             for arg in args:
                 opt_visitor(arg)
 
         opt_visitor(top_cell)
+
+        # write final result to heap
+        if not scalar_op(top_cell[0]):
+            top_cell[0] |= result_to_target;
+
         literal_stack = []
         array_stack = []
         op_stack = []

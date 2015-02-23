@@ -1,7 +1,7 @@
 from lazy_expr import lazy_expr
 from ops import *
 import numpy as np
-
+import aeev
 
 def dis(opcodes, doubles, arrays):
     print
@@ -13,6 +13,10 @@ def dis(opcodes, doubles, arrays):
         right_heap = False
         left_heap = False
         result_target = False
+        aleft, aright = o & left_array, o & right_array
+        o &= ~left_array
+        o &= ~right_array
+
         if o & right_on_heap:
             right_heap = True
             o &= ~right_on_heap
@@ -29,10 +33,12 @@ def dis(opcodes, doubles, arrays):
             o = o & ~array_scalar_bit
             print "{}:  array load {} (id: {})".format(i,o,id(arrays[o]))
         elif o in op_hash:
-            print "{}:  {} {} {} {}".format(i, op_hash[o],
-                                          "r-target" if result_target else "",
-                                          "l-heap" if left_heap else "",
-                                          "r-heap" if right_heap else "")
+            print "{}:  {} {}{}{}{}{}".format(i, op_hash[o],
+                                           "r-target " if result_target else "",
+                                           "l-heap " if left_heap else "",
+                                           "r-heap " if right_heap else "",
+                                           "a-left " if aleft else "",
+                                           "a-right " if aright else "")
         else:
             print "{}:  data ({})".format(i,o)
 
@@ -51,7 +57,7 @@ def dis(opcodes, doubles, arrays):
         print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
 
 a=lazy_expr(1.0)
-_b = np.ones(3)
+_b = np.ones(256*3)
 b=lazy_expr(_b)
 
 print
@@ -62,15 +68,25 @@ print
 print expr
 
 opcodes, doubles, arrays = expr.get_bytecode()
+
 dis(opcodes, doubles, arrays)
-
-print
-
-dis(*(b**2+b).get_bytecode())
 
 aops = np.array(opcodes, dtype=int)
 adou = np.array(doubles)
 target = np.zeros_like(_b)
+aeev.array_vm_eval(aops, adou, arrays, target)
 
-import aeev
+print
+print "="*80
+print "(b**2+b)"
+print
+
+expr = (b**2+b)
+opcodes, doubles, arrays = expr.get_bytecode()
+dis(opcodes, doubles, arrays)
+
+print
+
+aops = np.array(opcodes, dtype=int)
+adou = np.array(doubles)
 aeev.array_vm_eval(aops, adou, arrays, target)
