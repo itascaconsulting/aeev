@@ -93,7 +93,7 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
 
 #define CHUNK_SIZE 8
 #define GET_HEAP_PTR(arg) (double *) PyArray_DATA((PyArrayObject *) PyTuple_GET_ITEM(array_literals, alstack[arg]))
-
+#define INVALID PyErr_SetString(PyExc_ValueError, "invalid bytecode"); return NULL;
 static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 {
     PyObject *opcodes=0;
@@ -160,12 +160,10 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
         long op = c_opcodes[j];
 
         if (op & SCALAR_BIT) {
-            printf("literal load\n");
             dstack[dstack_ptr] = c_double_literals[op & ~SCALAR_BIT];
             dstack_ptr++;
         }
         else if (op & ARRAY_SCALAR_BIT) {
-            printf("array load\n");
             alstack[alstack_ptr] = op & ~ARRAY_SCALAR_BIT;
             alstack_ptr++;
         }
@@ -177,6 +175,76 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
             int case_code = (op & CODE_MASK) >> 13;
 
             switch (case_code) {
+
+            case 0: // 00000 scalar scalar op
+                break;
+            case 1: // 00001
+            case 2: // 00010
+            case 3: // 00011
+            case 4: // 00100
+            case 5: // 00101
+            case 6: // 00110
+            case 7: // 00111
+                INVALID;
+            case 8: // 01000 a-scalar b-array-stack, r-stack
+                res = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                b = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                break;
+            case 9: // 01001 a-scalar b-array-stach, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                b = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                break;
+
+            case 10: // 01010 a-scalar b-array-heap, r-stack
+                res = astack[astack_ptr] + i * CHUNK_SIZE;
+                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                astack_ptr++;
+                alstack_ptr--;
+                break;
+
+            case 11: // 01011 a-scalar, b-array-heap, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                alstack_ptr--;
+                break;
+
+            case 12: // 01100
+            case 13: // 01101
+            case 14: // 01110
+            case 15: // 01111
+                INVALID;
+
+            case 16: // 10000 a-array-stack, b-scalar, r-stack
+                res = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                a = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                break;
+
+            case 17: // 10001 a-array-stack, b-scalar, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                a = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                astack_ptr--;
+                break;
+
+            case 18: // 10010
+            case 19: // 10011
+                INVALID;
+            case 20: // 10100 a-array-heap, b-scalar, r-stack
+                res = astack[astack_ptr] + i * CHUNK_SIZE;
+                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                alstack_ptr--;
+                astack_ptr++;
+                break;
+
+            case 21: // 10101 a-array-heap, b-scalar, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                alstack_ptr--;
+                break;
+
+            case 22: // 10110
+            case 23: // 10111
+                INVALID;
+
             case 24: // 11000 a-stack, b-stack, r-stack
                 res = astack[astack_ptr-2] + i * CHUNK_SIZE;
                 a = astack[astack_ptr-2] + i * CHUNK_SIZE;
@@ -238,11 +306,30 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
             }
 
 
-            printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
+            //printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
             switch (op & ~BYTECODE_MASK) {
             case A_A_ADD:
-                printf("aa add op\n");
                 for (k=0; k<CHUNK_SIZE; k++) {res[k] = a[k] + b[k];}
+                break;
+
+            case A_S_ADD:
+                for (k=0; k<CHUNK_SIZE; k++) {
+                    res[k] = a[k] + dstack[dstack_ptr-1];
+                }
+                dstack_ptr--;
+                break;
+            case S_A_ADD:
+                for (k=0; k<CHUNK_SIZE; k++) {
+                    res[k] = dstack[dstack_ptr-1] + b[k];
+                }
+                dstack_ptr--;
+                break;
+            case S_S_ADD:
+                for (k=0; k<CHUNK_SIZE; k++) {
+                    dstack[dstack_ptr-2] = dstack[dstack_ptr-2] +
+                        dstack[dstack_ptr-1];
+                }
+                dstack_ptr--;
                 break;
             default:
                 printf("unknown op\n");

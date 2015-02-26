@@ -93,3 +93,38 @@ print
 aops = np.array(opcodes, dtype=int)
 adou = np.array(doubles)
 aeev.array_vm_eval(aops, adou, arrays, target)
+np.testing.assert_allclose(target, _b+_c)
+
+
+print
+print "="*80
+print "(c+b+c)"
+print
+
+expr = c+b+c
+opcodes, doubles, arrays = expr.get_bytecode()
+dis(opcodes, doubles, arrays)
+
+print
+
+aops = np.array(opcodes, dtype=int)
+adou = np.array(doubles)
+aeev.array_vm_eval(aops, adou, arrays, target)
+np.testing.assert_allclose(target, _c + _b + _c)
+
+
+print
+print "="*80
+print "(b+1.23)"
+print
+
+expr = b+1.23
+opcodes, doubles, arrays = expr.get_bytecode()
+dis(opcodes, doubles, arrays)
+
+print
+
+aops = np.array(opcodes, dtype=int)
+adou = np.array(doubles)
+aeev.array_vm_eval(aops, adou, arrays, target)
+np.testing.assert_allclose(target, _b + 1.23)
