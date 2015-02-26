@@ -114,6 +114,7 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     double *c_target=0;
     int array_size=0;
     int outside_loops=0;
+    int final_chunk=0;
     if (!PyArg_ParseTuple(args, "OOOO", &opcodes, &double_literals,
                           &array_literals, &target)) return NULL;
     if ( (! PyArray_CheckExact(opcodes)) ||
@@ -144,11 +145,8 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     array_size = PyArray_DIM((PyArrayObject *)target, 0);
     c_target = PyArray_DATA((PyArrayObject *)target);
 
-    if (array_size % CHUNK_SIZE) {
-        PyErr_SetString(PyExc_ValueError, "for now arrays must be a multiple of the chunk size.");
-        return NULL;
-    }
     outside_loops = array_size/CHUNK_SIZE;
+    final_chunk = array_size % CHUNK_SIZE;
 
     if (!PyTuple_Check(array_literals)) {
         PyErr_SetString(PyExc_ValueError, "array_literals should be a tuple of contiguous arrays of type float, all the same shape as target.");
@@ -156,165 +154,169 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     }
 
     c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
-    for (i=0; i<outside_loops; i++)
-    for (j=0; j<nops; j++) {
-        long op = c_opcodes[j];
+    for (i=0; i<outside_loops+1; i++) {
+        int chunk = CHUNK_SIZE;
+        if (i==outside_loops)
+            chunk = final_chunk;
+        for (j=0; j<nops; j++) {
+            long op = c_opcodes[j];
 
-        if (op & SCALAR_BIT) {
-            dstack[dstack_ptr] = c_double_literals[op & ~SCALAR_BIT];
-            dstack_ptr++;
-        }
-        else if (op & ARRAY_SCALAR_BIT) {
-            alstack[alstack_ptr] = op & ~ARRAY_SCALAR_BIT;
-            alstack_ptr++;
-        }
-        else  // normal op
-        {
-            double *res=0; // array result
-            double *a = 0; // left
-            double *b = 0; // right
-            int case_code = (op & CODE_MASK) >> 13;
-
-            switch (case_code) {
-
-            case 0: // 00000 scalar scalar op
-                break;
-            case 1: // 00001
-            case 2: // 00010
-            case 3: // 00011
-            case 4: // 00100
-            case 5: // 00101
-            case 6: // 00110
-            case 7: // 00111
-                INVALID;
-            case 8: // 01000 a-scalar b-array-stack, r-stack
-                res = astack[astack_ptr-1];
-                b = astack[astack_ptr-1];
-                break;
-            case 9: // 01001 a-scalar b-array-stach, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                b = astack[astack_ptr-1];
-                break;
-
-            case 10: // 01010 a-scalar b-array-heap, r-stack
-                res = astack[astack_ptr];
-                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                astack_ptr++;
-                alstack_ptr--;
-                break;
-
-            case 11: // 01011 a-scalar, b-array-heap, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                alstack_ptr--;
-                break;
-
-            case 12: // 01100
-            case 13: // 01101
-            case 14: // 01110
-            case 15: // 01111
-                INVALID;
-
-            case 16: // 10000 a-array-stack, b-scalar, r-stack
-                res = astack[astack_ptr-1];
-                a = astack[astack_ptr-1];
-                break;
-
-            case 17: // 10001 a-array-stack, b-scalar, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                a = astack[astack_ptr-1];
-                astack_ptr--;
-                break;
-
-            case 18: // 10010
-            case 19: // 10011
-                INVALID;
-            case 20: // 10100 a-array-heap, b-scalar, r-stack
-                res = astack[astack_ptr];
-                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                alstack_ptr--;
-                astack_ptr++;
-                break;
-
-            case 21: // 10101 a-array-heap, b-scalar, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                alstack_ptr--;
-                break;
-
-            case 22: // 10110
-            case 23: // 10111
-                INVALID;
-
-            case 24: // 11000 a-stack, b-stack, r-stack
-                res = astack[astack_ptr-2];
-                a = astack[astack_ptr-2];
-                b = astack[astack_ptr-1];
-                astack_ptr--;
-                break;
-
-            case 25: // 11001 a-stack, b-stack, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                a = astack[astack_ptr-2];
-                b = astack[astack_ptr-1];
-                astack_ptr -= 2;
-                break;
-
-            case 26: // 11010 a-stack, b-heap, r-stack
-                res = astack[astack_ptr-1];
-                a = astack[astack_ptr-1];
-                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                alstack_ptr--;
-                break;
-
-            case 27: // 11011 a-stack, b-heap, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                a = astack[astack_ptr-1];
-                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                astack_ptr--;
-                alstack_ptr--;
-                break;
-
-            case 28: // 11100  a-heap, b-stack, r-stack
-                res = astack[astack_ptr-1];
-                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                b = astack[astack_ptr-1];
-                alstack_ptr--;
-                break;
-
-            case 29: //11101 a-heap, b-stack, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                b = astack[astack_ptr-1];
-                alstack_ptr--;
-                astack_ptr--;
-                break;
-
-            case 30: // 11110 a-heap, b-heap, rstack
-                res = astack[astack_ptr];
-                a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
-                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                astack_ptr++;
-                alstack_ptr -= 2;
-                break;
-
-            case 31: // 11111 a-heap. b-heap, r-heap
-                res = c_target + i * CHUNK_SIZE;
-                a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
-                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
-                alstack_ptr -= 2;
-                break;
+            if (op & SCALAR_BIT) {
+                dstack[dstack_ptr] = c_double_literals[op & ~SCALAR_BIT];
+                dstack_ptr++;
             }
+            else if (op & ARRAY_SCALAR_BIT) {
+                alstack[alstack_ptr] = op & ~ARRAY_SCALAR_BIT;
+                alstack_ptr++;
+            }
+            else  // normal op
+            {
+                double *res=0; // array result
+                double *a = 0; // left
+                double *b = 0; // right
+                int case_code = (op & CODE_MASK) >> 13;
 
-            //printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
-            switch (op & ~BYTECODE_MASK) {
-                OPERATOR(ADD, +);
-                OPERATOR(SUB, -);
-                OPERATOR(MUL, *);
-                OPERATOR(DIV, /);
+                switch (case_code) {
 
-            default:
-                INVALID;
+                case 0: // 00000 scalar scalar op
+                    break;
+                case 1: // 00001
+                case 2: // 00010
+                case 3: // 00011
+                case 4: // 00100
+                case 5: // 00101
+                case 6: // 00110
+                case 7: // 00111
+                    INVALID;
+                case 8: // 01000 a-scalar b-array-stack, r-stack
+                    res = astack[astack_ptr-1];
+                    b = astack[astack_ptr-1];
+                    break;
+                case 9: // 01001 a-scalar b-array-stach, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    b = astack[astack_ptr-1];
+                    break;
+
+                case 10: // 01010 a-scalar b-array-heap, r-stack
+                    res = astack[astack_ptr];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    astack_ptr++;
+                    alstack_ptr--;
+                    break;
+
+                case 11: // 01011 a-scalar, b-array-heap, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+
+                case 12: // 01100
+                case 13: // 01101
+                case 14: // 01110
+                case 15: // 01111
+                    INVALID;
+
+                case 16: // 10000 a-array-stack, b-scalar, r-stack
+                    res = astack[astack_ptr-1];
+                    a = astack[astack_ptr-1];
+                    break;
+
+                case 17: // 10001 a-array-stack, b-scalar, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    a = astack[astack_ptr-1];
+                    astack_ptr--;
+                    break;
+
+                case 18: // 10010
+                case 19: // 10011
+                    INVALID;
+                case 20: // 10100 a-array-heap, b-scalar, r-stack
+                    res = astack[astack_ptr];
+                    a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    astack_ptr++;
+                    break;
+
+                case 21: // 10101 a-array-heap, b-scalar, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+
+                case 22: // 10110
+                case 23: // 10111
+                    INVALID;
+
+                case 24: // 11000 a-stack, b-stack, r-stack
+                    res = astack[astack_ptr-2];
+                    a = astack[astack_ptr-2];
+                    b = astack[astack_ptr-1];
+                    astack_ptr--;
+                    break;
+
+                case 25: // 11001 a-stack, b-stack, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    a = astack[astack_ptr-2];
+                    b = astack[astack_ptr-1];
+                    astack_ptr -= 2;
+                    break;
+
+                case 26: // 11010 a-stack, b-heap, r-stack
+                    res = astack[astack_ptr-1];
+                    a = astack[astack_ptr-1];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+
+                case 27: // 11011 a-stack, b-heap, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    a = astack[astack_ptr-1];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    astack_ptr--;
+                    alstack_ptr--;
+                    break;
+
+                case 28: // 11100  a-heap, b-stack, r-stack
+                    res = astack[astack_ptr-1];
+                    a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    b = astack[astack_ptr-1];
+                    alstack_ptr--;
+                    break;
+
+                case 29: //11101 a-heap, b-stack, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    b = astack[astack_ptr-1];
+                    alstack_ptr--;
+                    astack_ptr--;
+                    break;
+
+                case 30: // 11110 a-heap, b-heap, rstack
+                    res = astack[astack_ptr];
+                    a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    astack_ptr++;
+                    alstack_ptr -= 2;
+                    break;
+
+                case 31: // 11111 a-heap. b-heap, r-heap
+                    res = c_target + i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr -= 2;
+                    break;
+                }
+
+                //printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
+                switch (op & ~BYTECODE_MASK) {
+                    OPERATOR(ADD, +);
+                    OPERATOR(SUB, -);
+                    OPERATOR(MUL, *);
+                    OPERATOR(DIV, /);
+
+                default:
+                    INVALID;
+                }
             }
         }
     }

@@ -57,9 +57,9 @@ def dis(opcodes, doubles, arrays):
         print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
 
 a=lazy_expr(1.0)
-_b = np.linspace(0,1,256*100)
+_b = np.linspace(0,1,1e6)
 b=lazy_expr(_b)
-_c = np.linspace(1,2,256*100)
+_c = np.linspace(1,2,1e6)
 c=lazy_expr(_c)
 
 
