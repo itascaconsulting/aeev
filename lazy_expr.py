@@ -131,6 +131,7 @@ class lazy_expr(object):
             top_cell[0] |= result_to_target;
 
         literal_stack = []
+        array_id_stack = []
         array_stack = []
         op_stack = []
 
@@ -143,13 +144,14 @@ class lazy_expr(object):
                     literal_stack.append(args[0])
                     op_stack.append(scalar_bit | (len(literal_stack)-1))
             elif op == ia_scalar:
-                if args[0] in array_stack:
+                if id(args[0]) in array_id_stack:
                     op_stack.append(array_scalar_bit |
-                                    array_stack.index(args[0]))
+                                    array_id_stack.index(id(args[0])))
                 else:
                     array_stack.append(args[0])
+                    array_id_stack.append(id(args[0]))
                     op_stack.append(array_scalar_bit |
-                                    array_stack.index(args[0]))
+                                    array_id_stack.index(id(args[0])))
 
             else:
                 for a in args:

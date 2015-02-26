@@ -55,58 +55,16 @@ op_hash = {
     1 << 11 : "array_scalar_bit",
     1 << 12 : "scalar_bit",
     1 << 13 : "result_to_target",
-    1 << 14 : "left_on_heap",
-    1 << 15 : "right_on_heap",
-    1 << 16 : "left_array",
-    1 << 17 : "right_array",
+    1 << 14 : "right_on_heap",
+    1 << 15 : "left_on_heap",
+    1 << 16 : "right_array",
+    1 << 17 : "left_array",
+    1 << 13 | 1 << 14 | 1 << 15 | 1 << 16 | 1 << 17 : "code_mask",
     1 << 11 | 1<<12 | 1<<13 | 1 << 14 | 1<<15 | 1<<16 | 1<<17 : "bytecode_mask",
 
 # values
     a_counter(260) : "ia_scalar",
     s_counter(563) : "i_scalar",
-    # s_counter() :     "p_scalar",
-    # a_counter() :     "pa_scalar",
-
-# proxies
-
-    #counter() :     "proxy_rad",
-
-#################
-###  vector stuff
-#################
-
-    # counter() :     "v_mag",
-    # counter() :     "v_x",
-    # counter() :     "v_y",
-    # counter() :     "v_z",
-
-
-#     counter(500) :     "vv_add",
-#     counter() :     "vv_sub",
-#     counter() :     "vv_mul",
-#     counter() :     "vv_pow",
-#     counter() :     "v_negate",
-
-#     counter() :     "vs_add",
-#     counter() :     "vs_sub",
-#     counter() :     "vs_mul",
-#     counter() :     "vs_pow",
-
-#     counter() :     "sv_add",
-#     counter() :     "sv_sub",
-#     counter() :     "sv_mul",
-#     counter() :     "sv_pow",
-
-#     counter() :     "v_norm",
-#     counter() :     "i_vector",
-#     counter() :     "ia_vector",
-#     counter() :     "p_vector",
-#     counter() :     "pa_vector",
-
-# # proxy values
-#     counter() :     "proxy_vel",
-#     counter() :     "proxy_fapply",
-#     counter() :     "proxy_pos"
 }
 
 for k,v in op_hash.iteritems():

@@ -57,8 +57,11 @@ def dis(opcodes, doubles, arrays):
         print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
 
 a=lazy_expr(1.0)
-_b = np.ones(256*3)
+_b = np.linspace(0,1,8*3)
 b=lazy_expr(_b)
+_c = np.linspace(1,2,8*3)
+c=lazy_expr(_c)
+
 
 print
 print "(a+b**2)+22.2"
@@ -81,7 +84,7 @@ print "="*80
 print "(b**2+b)"
 print
 
-expr = (b**2+b)
+expr = b+c
 opcodes, doubles, arrays = expr.get_bytecode()
 dis(opcodes, doubles, arrays)
 

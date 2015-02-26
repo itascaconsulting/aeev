@@ -1,3 +1,4 @@
+
 #include "Python.h"
 #include "numpy/noprefix.h"
 #include "stdio.h"
@@ -59,8 +60,6 @@ static PyObject *eval(PyObject *self, PyObject *args)
     return PyFloat_FromDouble(eval_double(cell, 0));
 }
 
-#define CHUNK_SIZE 256
-
 static PyObject *array_eval(PyObject *self, PyObject *args)
 {
     // input is a tuple (opcode)
@@ -91,6 +90,9 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
     }
     Py_RETURN_NONE;
 }
+
+#define CHUNK_SIZE 8
+#define GET_HEAP_PTR(arg) (double *) PyArray_DATA((PyArrayObject *) PyTuple_GET_ITEM(array_literals, alstack[arg]))
 
 static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 {
@@ -155,9 +157,6 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
     for (i=0; i<outside_loops; i++)
     for (j=0; j<nops; j++) {
-        int result_target = 0;
-        int left_heap = 0;
-        int right_heap = 0;
         long op = c_opcodes[j];
 
         if (op & SCALAR_BIT) {
@@ -172,44 +171,81 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
         }
         else  // normal op
         {
-            double *res=0;
+            double *res=0; // array result
             double *a = 0; // left
             double *b = 0; // right
+            int case_code = (op & CODE_MASK) >> 13;
 
-            if (op & RESULT_TO_TARGET) {
-                result_target = 1;
-                res = target+i*CHUNK_SIZE;
-            }
-            else {
-                res = astack[astack_ptr-1];
-            }
-            if (op & LEFT_ON_HEAP) {
-                left_heap = 1;
-            }
-            if (op & RIGHT_ON_HEAP) {
-                right_heap = 1;
-            }
-            op &= ~BYTECODE_MASK;
+            switch (case_code) {
+            case 24: // 11000 a-stack, b-stack, r-stack
+                res = astack[astack_ptr-2] + i * CHUNK_SIZE;
+                a = astack[astack_ptr-2] + i * CHUNK_SIZE;
+                b = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                astack_ptr--;
+                break;
 
-            printf("opcode %l %i \n", op, c_opcodes[j]);
-            switch (op) {
-            case A_A_ADD: {
-                /* if (left_heap) { */
-                /*     a = (double *) */
-                /*         PyArray_DATA((PyArrayObject *) */
-                /*                      PyTuple_GET_ITEM( */
-                /*                          array_literals, */
-                /*                          alstack[alstack_ptr])); */
-                /* } */
-                /* else a = astack */
+            case 25: // 11001 a-stack, b-stack, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                a = astack[astack_ptr-2] + i * CHUNK_SIZE;
+                b = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                astack_ptr -= 2;
+                break;
 
-                // a and b are pointers into stack or heap memory where this
-                // chunk starts.
-                /* for (k=0; k<chunk_size; k++) { */
-                /*     res[k] = a[k] + b[k]; */
-                /* } */
+            case 26: // 11010 a-stack, b-heap, r-stack
+                res = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                a = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                alstack_ptr--;
+                break;
+
+            case 27: // 11011 a-stack, b-heap, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                a = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                astack_ptr--;
+                alstack_ptr--;
+                break;
+
+            case 28: // 11100  a-heap, b-stack, r-stack
+                res = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                b = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                alstack_ptr--;
+                break;
+
+            case 29: //11101 a-heap, b-stack, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                b = astack[astack_ptr-1] + i * CHUNK_SIZE;
+                alstack_ptr--;
+                astack_ptr--;
+                break;
+
+            case 30: // 11110 a-heap, b-heap, rstack
+                res = astack[astack_ptr] + i * CHUNK_SIZE;
+                a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
+                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                astack_ptr++;
+                alstack_ptr -= 2;
+                break;
+
+            case 31: // 11111 a-heap. b-heap, r-heap
+                res = c_target + i * CHUNK_SIZE;
+                a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
+                b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                alstack_ptr -= 2;
                 break;
             }
+
+
+            printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
+            switch (op & ~BYTECODE_MASK) {
+            case A_A_ADD:
+                printf("aa add op\n");
+                for (k=0; k<CHUNK_SIZE; k++) {res[k] = a[k] + b[k];}
+                break;
+            default:
+                printf("unknown op\n");
 
             }
 
@@ -271,46 +307,6 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
 
 
 
-static PyObject *call_test_chunk(PyObject *self, PyObject *args)
-{
-    int size=0;
-    int i=0;
-    int j=0;
-    PyArrayObject *ar0;
-    PyArrayObject *ar1;
-    PyArrayObject *ar2;
-
-    double *data0;
-    double *data1;
-    double *data2;
-
-    double local_a[CHUNK_SIZE];
-    double local_b[CHUNK_SIZE];
-    double local_c[CHUNK_SIZE];
-
-    PyObject *par = PyTuple_GetItem(args, 0);
-    ar0 = (PyArrayObject *)PyArray_FROMANY(par, PyArray_DOUBLE, 1, 2, NPY_IN_ARRAY);
-    par = PyTuple_GetItem(args, 1);
-    ar1 = (PyArrayObject *)PyArray_FROMANY(par, PyArray_DOUBLE, 1, 2, NPY_IN_ARRAY);
-    par = PyTuple_GetItem(args, 2);
-    ar2 = (PyArrayObject *)PyArray_FROMANY(par, PyArray_DOUBLE, 1, 2, NPY_IN_ARRAY);
-
-    data0 = (double *)ar0->data;
-    data1 = (double *)ar1->data;
-    data2 = (double *)ar2->data;
-
-    size = PyArray_DIM(ar0,0);
-    int nsteps = size/CHUNK_SIZE;
-
-    for (i=0; i<nsteps; i++) {
-        for (j=0; j<CHUNK_SIZE; j++) { local_a[j] = data0[i*CHUNK_SIZE + j]; }
-        for (j=0; j<CHUNK_SIZE; j++) { local_b[j] = data1[i*CHUNK_SIZE + j]; }
-        for (j=0; j<CHUNK_SIZE; j++) { local_c[j] = local_a[j] + local_b[j]; }
-        for (j=0; j<CHUNK_SIZE; j++) { data2[i+CHUNK_SIZE + j] = local_c[j]; }
-    }
-
-    Py_RETURN_NONE;
-}
 
 static PyObject *call_test(PyObject *self, PyObject *args)
 {
@@ -353,7 +349,6 @@ module_functions[] = {
     { "vm_eval", vm_eval, METH_VARARGS, "Say hello." },
     { "array_vm_eval", array_vm_eval, METH_VARARGS, "Say hello." },
     { "call_test", call_test, METH_VARARGS, "Say hello." },
-    { "call_test_chunk", call_test_chunk, METH_VARARGS, "Say hello." },
     { NULL }
 };
 
