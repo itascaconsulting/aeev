@@ -57,9 +57,9 @@ def dis(opcodes, doubles, arrays):
         print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
 
 a=lazy_expr(1.0)
-_b = np.linspace(0,1,8*3)
+_b = np.linspace(0,1,256*100)
 b=lazy_expr(_b)
-_c = np.linspace(1,2,8*3)
+_c = np.linspace(1,2,256*100)
 c=lazy_expr(_c)
 
 
@@ -77,11 +77,11 @@ dis(opcodes, doubles, arrays)
 aops = np.array(opcodes, dtype=int)
 adou = np.array(doubles)
 target = np.zeros_like(_b)
-aeev.array_vm_eval(aops, adou, arrays, target)
+#aeev.array_vm_eval(aops, adou, arrays, target)
 
 print
 print "="*80
-print "(b**2+b)"
+print "(b+c)"
 print
 
 expr = b+c
@@ -95,36 +95,44 @@ adou = np.array(doubles)
 aeev.array_vm_eval(aops, adou, arrays, target)
 np.testing.assert_allclose(target, _b+_c)
 
+##
 
-print
-print "="*80
-print "(c+b+c)"
-print
-
-expr = c+b+c
+expr = b+b+b
+print "b+b+b"
+print expr
 opcodes, doubles, arrays = expr.get_bytecode()
 dis(opcodes, doubles, arrays)
-
-print
-
 aops = np.array(opcodes, dtype=int)
 adou = np.array(doubles)
 aeev.array_vm_eval(aops, adou, arrays, target)
-np.testing.assert_allclose(target, _c + _b + _c)
+np.testing.assert_allclose(target, _b + _b + _b)
 
-
-print
-print "="*80
-print "(b+1.23)"
-print
+##
 
 expr = b+1.23
+print expr
 opcodes, doubles, arrays = expr.get_bytecode()
-dis(opcodes, doubles, arrays)
-
-print
-
+#dis(opcodes, doubles, arrays)
 aops = np.array(opcodes, dtype=int)
 adou = np.array(doubles)
 aeev.array_vm_eval(aops, adou, arrays, target)
 np.testing.assert_allclose(target, _b + 1.23)
+
+##
+
+expr = b+1.23*c+b/2.0
+opcodes, doubles, arrays = expr.get_bytecode()
+#dis(opcodes, doubles, arrays)
+aops = np.array(opcodes, dtype=int)
+adou = np.array(doubles)
+aeev.array_vm_eval(aops, adou, arrays, target)
+np.testing.assert_allclose(target, _b+1.23*_c+_b/2.0)
+
+
+expr = b/(c*c)+1.23*c+(b*a*c+1.223*(b+c))/2.0
+opcodes, doubles, arrays = expr.get_bytecode()
+#dis(opcodes, doubles, arrays)
+aops = np.array(opcodes, dtype=int)
+adou = np.array(doubles)
+aeev.array_vm_eval(aops, adou, arrays, target)
+np.testing.assert_allclose(target, _b/(_c*_c)+1.23*_c+(_b*1.0*_c+1.223*(_b+_c))/2.0)
