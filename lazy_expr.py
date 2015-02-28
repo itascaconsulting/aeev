@@ -34,8 +34,6 @@ class lazy_expr(object):
         return lazy_expr((base_op_code + code, a, b))
 
     def __init__(self, data):
-        self.target=None
-        self.rhs =None
         if isinstance(data, tuple):
             self.data = data
         elif isinstance(data, lazy_expr):
