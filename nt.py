@@ -3,7 +3,13 @@ from ops import *
 import numpy as np
 import aeev
 
-def dis(opcodes, doubles, arrays):
+def dis(expr):
+    """ Byte code and stack disassembler/pretty-printer"""
+    if type(expr) is lazy_expr:
+        opcodes, doubles, arrays = expr.get_bytecode()
+    else:
+        opcodes, doubles, arrays = expr.rhs.get_bytecode()
+
     print
     print "op codes"
     print "========"
@@ -61,32 +67,40 @@ _b = np.linspace(0,1,1e6)
 b=lazy_expr(_b)
 _c = np.linspace(1,2,1e6)
 c=lazy_expr(_c)
+_target = np.zeros_like(_b)
+target = lazy_expr(_target)
 
+print "b+c"
+
+expr = target == b+c
+dis(expr)
+
+print expr
+print expr.vm_eval()
+np.testing.assert_allclose(expr.vm_eval(), _b+_c)
+
+print "=" * 80
 
 print
 print "(a+b**2)+22.2"
 print
-expr = (a+b**2)+22.2
+
+expr = target == (a+b**2)+22.2
+
+print expr
+dis(expr)
+np.testing.assert_allclose(expr.vm_eval(), (1.0+_b**2)+22.2)
+1/0
+
 print
 print expr
 
-opcodes, doubles, arrays = expr.get_bytecode()
-
-dis(opcodes, doubles, arrays)
+1/0
+dis(expr)
 
 aops = np.array(opcodes, dtype=int)
 adou = np.array(doubles)
-target = np.zeros_like(_b)
 #aeev.array_vm_eval(aops, adou, arrays, target)
-
-print
-print "="*80
-print "(b+c)"
-print
-
-expr = b+c
-opcodes, doubles, arrays = expr.get_bytecode()
-dis(opcodes, doubles, arrays)
 
 print
 

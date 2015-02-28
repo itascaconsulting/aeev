@@ -1,10 +1,28 @@
 from ops import *
 import array
 import numpy as np
+import aeev
 
+class Assignment(object):
+    "an expression which can be evaluated and assigned to a result"
+    def __init__(self, lhs, rhs):
+        assert type(lhs) is np.ndarray
+        assert type(rhs) is lazy_expr
+        self.lhs = lhs
+        self.rhs = rhs
+        self.op_stack, self.literal_stack, self.array_stack = \
+                                                self.rhs.get_bytecode()
+
+    def vm_eval(self):
+        aeev.array_vm_eval(self.op_stack, self.literal_stack,
+                           self.array_stack, self.lhs)
+        return self.lhs
+
+    def __repr__(self):
+        return "Assignment lhs({}) == rhs({})".format(self.lhs,
+                                                      self.rhs)
 
 class lazy_expr(object):
-
 
     def typecode(left, right):
         "returns 0, 1, 2 or 3 for a_a, a_s, s_a, s_s"
@@ -16,6 +34,8 @@ class lazy_expr(object):
         return lazy_expr((base_op_code + code, a, b))
 
     def __init__(self, data):
+        self.target=None
+        self.rhs =None
         if isinstance(data, tuple):
             self.data = data
         elif isinstance(data, lazy_expr):
@@ -32,6 +52,14 @@ class lazy_expr(object):
         if self.data[0] >= 500:
             return 1
         return 0
+
+    def __eq__(self, other):
+        rhs = lazy_expr(other)
+        assert self.data[0] == ia_scalar, "lhs must be an array"
+        lhs = self.data[1]
+        assert type(lhs) is np.ndarray
+        return Assignment(lhs, rhs)
+
 
     def __add__(self, other):
         return lazy_expr.handle_op(self, lazy_expr(other), a_a_add)
@@ -90,7 +118,7 @@ class lazy_expr(object):
 
         def scalar_op(opcode):
             assert type(opcode & ~bytecode_mask) is int
-            return '3' == str(opcode)[-1]
+            return '3' == str(opcode & ~bytecode_mask)[-1]
 
         def left_is_array(opcode):
             char = str(opcode & ~bytecode_mask)[-1]
@@ -158,4 +186,6 @@ class lazy_expr(object):
                     visitor(a, literal_stack, op_stack, array_stack)
                 op_stack.append(op)
         visitor(top_cell, literal_stack, op_stack, array_stack)
-        return tuple(op_stack), tuple(literal_stack), tuple(array_stack)
+        return np.array(op_stack, dtype=int), \
+            np.array(literal_stack), \
+            tuple(array_stack)

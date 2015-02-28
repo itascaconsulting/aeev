@@ -314,6 +314,17 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     OPERATOR(MUL, *);
                     OPERATOR(DIV, /);
 
+                case A_A_POW:
+                    for (k=0; k<chunk; k++) {res[k] = pow(a[k], b[k]);}
+                    break;
+
+                case A_S_POW:
+                    for (k=0; k<chunk; k++) {
+                        res[k] = pow(a[k], dstack[dstack_ptr-1]);
+                    }
+                    dstack_ptr--;
+                    break;
+
                 default:
                     INVALID;
                 }
