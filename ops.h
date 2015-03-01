@@ -24,7 +24,7 @@
 #define S_A_DIV 232
 #define S_S_POW 553
 #define RIGHT_ON_HEAP 16384
-#define A_NEGATE 240
+#define A_NEGATE 241
 #define S_NEGATE 243
 #define S_S_ADD 503
 #define A_A_POW 250

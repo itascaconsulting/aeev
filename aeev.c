@@ -324,7 +324,23 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     }
                     dstack_ptr--;
                     break;
-
+                case S_A_POW:
+                    for (k=0; k<chunk; k++) {
+                        res[k] = pow(dstack[dstack_ptr-1], b[k]);
+                    }
+                    dstack_ptr--;
+                    break;
+                case S_S_POW:
+                    dstack[dstack_ptr-2] = pow(dstack[dstack_ptr-2],
+                                               dstack[dstack_ptr-1]);
+                    dstack_ptr--;
+                    break;
+                case S_NEGATE:
+                    dstack[dstack_ptr-1] = -dstack[dstack_ptr-1];
+                    break;
+                case A_NEGATE:
+                    for (k=0; k<chunk; k++) { res[k] = -a[k]; }
+                    break;
                 default:
                     INVALID;
                 }
@@ -418,11 +434,13 @@ static PyObject *call_test(PyObject *self, PyObject *args)
 // Module functions table.
 static PyMethodDef
 module_functions[] = {
-    { "eval", eval, METH_VARARGS, "Say hello." },
-    { "array_eval", array_eval, METH_VARARGS, "Say hello." },
-    { "vm_eval", vm_eval, METH_VARARGS, "Say hello." },
-    { "array_vm_eval", array_vm_eval, METH_VARARGS, "Say hello." },
-    { "call_test", call_test, METH_VARARGS, "Say hello." },
+    { "eval", eval, METH_VARARGS, "AST walking interpreter" },
+    { "array_eval", array_eval, METH_VARARGS,
+      "Array capable AST walking interpreter" },
+    { "vm_eval", vm_eval, METH_VARARGS, "Virtual machine evaluator" },
+    { "array_vm_eval", array_vm_eval, METH_VARARGS,
+      "Array capable VM evaluator" },
+    { "call_test", call_test, METH_VARARGS, "test entry point" },
     { NULL }
 };
 
@@ -431,6 +449,7 @@ module_functions[] = {
 void
 initaeev(void)
 {
-    Py_InitModule3("aeev", module_functions, "A minimal module.");
+    Py_InitModule3("aeev", module_functions,
+                   "Array expression evaluation experiments");
     import_array();
 }

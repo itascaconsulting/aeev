@@ -12,6 +12,7 @@ class Assignment(object):
         self.rhs = rhs
         self.op_stack, self.literal_stack, self.array_stack = \
                                                 self.rhs.get_bytecode()
+        assert len(self.array_stack), "expression must contain array"
 
     def vm_eval(self):
         aeev.array_vm_eval(self.op_stack, self.literal_stack,
@@ -19,11 +20,11 @@ class Assignment(object):
         return self.lhs
 
     def __repr__(self):
-        return "Assignment lhs({}) == rhs({})".format(self.lhs,
-                                                      self.rhs)
+        return "Assignment lhs({}) \n=\nrhs({})".format(self.lhs,
+                                                        self.rhs)
 
 class lazy_expr(object):
-
+    """Represents an ast node, an operator and at least one value"""
     def typecode(left, right):
         "returns 0, 1, 2 or 3 for a_a, a_s, s_a, s_s"
         return left.is_scalar()*2 + right.is_scalar()

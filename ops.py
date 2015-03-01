@@ -1,8 +1,14 @@
-# operator codes
+# ast codes, bytecodes and flags
 
-# less than 500 returns scalar
+# type (is, as, iv, av) 00 01 10 11
+# return type in two bits   (2)
+# op 1 as two bits          (2)
+# op 2 as two bits          (2)
+# final heap bit            (1)
+# a heap bit                (1)
+# b heap bit                (1)
 
-#ops of zero or less than zero are literal indicies
+# each op has 16 cases
 
 class OpCounter(object):
     def __init__(self,n=0):
@@ -48,7 +54,7 @@ op_hash = {
     s_counter(553) : "s_s_pow",
 
     # unary -
-    a_counter(240) : "a_negate",
+    a_counter(241) : "a_negate", # 241 so the second arg is not array flagged
     s_counter(243) : "s_negate",
 
 # bytecode bits

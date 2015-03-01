@@ -70,83 +70,29 @@ c=lazy_expr(_c)
 _target = np.zeros_like(_b)
 target = lazy_expr(_target)
 
-print "b+c"
-
 expr = target == b+c
 dis(expr)
-
-print expr
 print expr.vm_eval()
 np.testing.assert_allclose(expr.vm_eval(), _b+_c)
 
-print "=" * 80
-
-print
-print "(a+b**2)+22.2"
-print
-
 expr = target == (a+b**2)+22.2
-
-print expr
-dis(expr)
 np.testing.assert_allclose(expr.vm_eval(), (1.0+_b**2)+22.2)
-1/0
 
-print
-print expr
+expr = target == b+b+b
+np.testing.assert_allclose(expr.vm_eval(), _b + _b + _b)
 
-1/0
-dis(expr)
+expr = target == b+1.23
+np.testing.assert_allclose(expr.vm_eval(), _b + 1.23)
 
-aops = np.array(opcodes, dtype=int)
-adou = np.array(doubles)
-#aeev.array_vm_eval(aops, adou, arrays, target)
+expr = target == b+1.23*c+b/2.0
+np.testing.assert_allclose(expr.vm_eval(), _b+1.23*_c+_b/2.0)
 
-print
+expr = target == b/(c*c)+1.23*c+(b*a*c+1.223*(b+c))/2.0
+np.testing.assert_allclose(expr.vm_eval(),
+                           _b/(_c*_c)+1.23*_c+(_b*1.0*_c+1.223*(_b+_c))/2.0)
 
-aops = np.array(opcodes, dtype=int)
-adou = np.array(doubles)
-aeev.array_vm_eval(aops, adou, arrays, target)
-np.testing.assert_allclose(target, _b+_c)
+expr = target == -b
+np.testing.assert_allclose(expr.vm_eval(), -_b)
 
-##
-
-expr = b+b+b
-print "b+b+b"
-print expr
-opcodes, doubles, arrays = expr.get_bytecode()
-dis(opcodes, doubles, arrays)
-aops = np.array(opcodes, dtype=int)
-adou = np.array(doubles)
-aeev.array_vm_eval(aops, adou, arrays, target)
-np.testing.assert_allclose(target, _b + _b + _b)
-
-##
-
-expr = b+1.23
-print expr
-opcodes, doubles, arrays = expr.get_bytecode()
-#dis(opcodes, doubles, arrays)
-aops = np.array(opcodes, dtype=int)
-adou = np.array(doubles)
-aeev.array_vm_eval(aops, adou, arrays, target)
-np.testing.assert_allclose(target, _b + 1.23)
-
-##
-
-expr = b+1.23*c+b/2.0
-opcodes, doubles, arrays = expr.get_bytecode()
-#dis(opcodes, doubles, arrays)
-aops = np.array(opcodes, dtype=int)
-adou = np.array(doubles)
-aeev.array_vm_eval(aops, adou, arrays, target)
-np.testing.assert_allclose(target, _b+1.23*_c+_b/2.0)
-
-
-expr = b/(c*c)+1.23*c+(b*a*c+1.223*(b+c))/2.0
-opcodes, doubles, arrays = expr.get_bytecode()
-#dis(opcodes, doubles, arrays)
-aops = np.array(opcodes, dtype=int)
-adou = np.array(doubles)
-aeev.array_vm_eval(aops, adou, arrays, target)
-np.testing.assert_allclose(target, _b/(_c*_c)+1.23*_c+(_b*1.0*_c+1.223*(_b+_c))/2.0)
+expr = target == c * (1 + -b/c)
+np.testing.assert_allclose(expr.vm_eval(), _c*(1+-_b/_c))
