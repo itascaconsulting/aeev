@@ -2,6 +2,7 @@ from ops import *
 import array
 import numpy as np
 import aeev
+from _vec import vec3 as vec
 
 class Assignment(object):
     "an expression which can be evaluated and assigned to a result"
@@ -35,14 +36,21 @@ class lazy_expr(object):
         return lazy_expr((base_op_code + code, a, b))
 
     def __init__(self, data):
-        if isinstance(data, tuple):
+        if type(data) is tuple:
             self.data = data
-        elif isinstance(data, lazy_expr):
+        elif type(data) is lazy_expr:
             self.data = data.data
-        elif isinstance(data, float) or isinstance(data, int):
+        elif type(data) is float or type(data) is int:
             self.data = (i_scalar, float(data))
+        elif type(data) is vec:
+            self.data = (i_vec, data)
         elif type(data) is np.ndarray:
-            self.data = (ia_scalar, data)
+            if data.ndim == 1:
+                self.data = (ia_scalar, data)
+            else:
+                assert data.ndim == 2
+                assert data.shape[1] == 3
+                self.data = (ia_vec, data)
         else:
             raise ValueError("unknown type")
 
@@ -54,7 +62,8 @@ class lazy_expr(object):
 
     def __eq__(self, other):
         rhs = lazy_expr(other)
-        assert self.data[0] == ia_scalar, "lhs must be an array"
+        assert self.data[0] == ia_scalar or self.data[0] == ia_vec, \
+            "lhs must be an array"
         lhs = self.data[1]
         assert type(lhs) is np.ndarray
         return Assignment(lhs, rhs)
@@ -97,9 +106,9 @@ class lazy_expr(object):
             ", ".join(map(str, self.data[1:])) +  " )"
 
     def get_tuple(self):
-        if self.data[0] == i_scalar:
+        if self.data[0] == i_scalar or self.data[0] == i_vec:
             return self.data
-        elif self.data[0] == ia_scalar:
+        elif self.data[0] == ia_scalar or self.data[0] == ia_vec:
             return self.data
         else:
             if len(self.data) == 2:
@@ -137,7 +146,8 @@ class lazy_expr(object):
         def opt_visitor(cell):
             """Add bits to bytecodes"""
             op, args = cell[0], cell[1:]
-            if scalar_op(op) or op == i_scalar or op == ia_scalar:
+            if scalar_op(op) or op == i_scalar or op == ia_scalar or \
+               op == i_vec or op == ia_vec:
                 return
             flags = 0
             if args[0][0] == ia_scalar:
@@ -170,7 +180,7 @@ class lazy_expr(object):
                 else:
                     literal_stack.append(args[0])
                     op_stack.append(scalar_bit | (len(literal_stack)-1))
-            elif op == ia_scalar:
+            elif op == ia_scalar or op == ia_vec:
                 if id(args[0]) in array_id_stack:
                     op_stack.append(array_scalar_bit |
                                     array_id_stack.index(id(args[0])))

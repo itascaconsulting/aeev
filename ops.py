@@ -71,6 +71,8 @@ op_hash = {
 # values
     a_counter(260) : "ia_scalar",
     s_counter(563) : "i_scalar",
+    s_counter()    : "ia_vec",
+    s_counter()    : "i_vec",
 }
 
 for k,v in op_hash.iteritems():
