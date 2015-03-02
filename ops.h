@@ -1,7 +1,7 @@
-#define ARRAY_SCALAR_BIT 2048
+#define VECTOR_BIT 1024
 #define S_S_SUB 513
 #define RESULT_TO_TARGET 8192
-#define SCALAR_BIT 4096
+#define ARRAY_SCALAR_BIT 2048
 #define A_A_ADD 200
 #define A_S_ADD 201
 #define S_A_ADD 202
@@ -19,6 +19,7 @@
 #define S_A_MUL 222
 #define RIGHT_ARRAY 65536
 #define LEFT_ARRAY 131072
+#define SCALAR_BIT 4096
 #define A_A_DIV 230
 #define A_S_DIV 231
 #define S_A_DIV 232
@@ -26,6 +27,8 @@
 #define RIGHT_ON_HEAP 16384
 #define A_NEGATE 241
 #define S_NEGATE 243
+#define IA_VEC 564
+#define I_VEC 565
 #define S_S_ADD 503
 #define A_A_POW 250
 #define A_S_POW 251

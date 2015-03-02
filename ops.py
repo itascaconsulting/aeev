@@ -1,79 +1,82 @@
+import itertools
+import operator
+
 # ast codes, bytecodes and flags
 
-# type (is, as, iv, av) 00 01 10 11
-# return type in two bits   (2)
-# op 1 as two bits          (2)
-# op 2 as two bits          (2)
-# final heap bit            (1)
-# a heap bit                (1)
-# b heap bit                (1)
+# type codes
+scalar_type       = 0  ## 00
+scalar_array_type = 1  ## 01
+vector_type       = 2  ## 10
+vector_array_type = 3  ## 11
 
-# each op has 16 cases
+a_scalar_type       = 0 << 23
+a_scalar_array_type = 1 << 23
+a_vector_type       = 2 << 23
+a_vector_array_type = 3 << 23
+
+b_scalar_type       = 0 << 21
+b_scalar_array_type = 1 << 21
+b_vector_type       = 2 << 21
+b_vector_array_type = 3 << 21
+
+r_scalar_type       = 0 << 19
+r_scalar_array_type = 1 << 19
+r_vector_type       = 2 << 19
+r_vector_array_type = 3 << 19
+
+# lower bit of address is also an array type flag
+
+vector_load       = 1 << 31
+vector_array_load = 1 << 30
+scalar_load       = 1 << 29
+scalar_array_load = 1 << 28
+result_to_heap    = 1 << 27
+a_on_heap         = 1 << 26
+b_on_heap         = 1 << 25
+a_type_mask       = 1 << 24 | 1 << 23
+b_type_mask       = 1 << 22 | 1 << 21
+r_type_mask       = i << 20 | 1 << 19
+
+bytecode_mask = reduce(operator.or_, [1<<i for i in range(21,32)])
 
 class OpCounter(object):
     def __init__(self,n=0):
         self.n = n-1
-    def __call__(self, n=None):
-        if not n is None:
-            self.n = n-1
+    def __call__(self, flags=0):
         self.n += 1
-        return self.n
+        return self.n | flags
 
-s_counter = OpCounter(200)
-a_counter = OpCounter(500)
+op_counter = OpCounter(10)
+
+types = "s","v","as","av"
+op_cases = list(itertools.product(types, repeat=2))
+op_cases = ["{}_{}_".format(x,y) for x,y in op_cases]
 
 op_hash = {
-    # +
-    a_counter(200) : "a_a_add",
-    a_counter() :    "a_s_add",
-    a_counter() :    "s_a_add",
-    s_counter(503) : "s_s_add",
-
-    # -
-    a_counter(210) : "a_a_sub",
-    a_counter() :    "a_s_sub",
-    a_counter() :    "s_a_sub",
-    s_counter(513) : "s_s_sub",
-
-    # *
-    a_counter(220) : "a_a_mul",
-    a_counter() :    "a_s_mul",
-    a_counter() :    "s_a_mul",
-    s_counter(523) : "s_s_mul",
-
-    # /
-    a_counter(230) : "a_a_div",
-    a_counter() :    "a_s_div",
-    a_counter() :    "s_a_div",
-    s_counter(533) : "s_s_div",
-
-    # **
-    a_counter(250) : "a_a_pow",
-    a_counter() :    "a_s_pow",
-    a_counter() :    "s_a_pow",
-    s_counter(553) : "s_s_pow",
-
-    # unary -
-    a_counter(241) : "a_negate", # 241 so the second arg is not array flagged
-    s_counter(243) : "s_negate",
-
-# bytecode bits
-    1 << 11 : "array_scalar_bit",
-    1 << 12 : "scalar_bit",
-    1 << 13 : "result_to_target",
-    1 << 14 : "right_on_heap",
-    1 << 15 : "left_on_heap",
-    1 << 16 : "right_array",
-    1 << 17 : "left_array",
-    1 << 13 | 1 << 14 | 1 << 15 | 1 << 16 | 1 << 17 : "code_mask",
-    1 << 11 | 1<<12 | 1<<13 | 1 << 14 | 1<<15 | 1<<16 | 1<<17 : "bytecode_mask",
-
 # values
-    a_counter(260) : "ia_scalar",
-    s_counter(563) : "i_scalar",
-    s_counter()    : "ia_vec",
-    s_counter()    : "i_vec",
+    op_counter(r_s) : "s",
+    op_counter(r_v) : "v",
+    op_counter() : "as",
+    op_counter() : "av",
+    op_counter(r_s | a_s) : "s_negate",
+    op_counter(r_v | a_v) : "v_negate",
+    op_counter(r_as | a_sa) : "as_negate",
+    op_counter(r_av | a_av) : "av_negate",
+# unary functions
+    op_counter() : "v_mag",
+    op_counter() : "v_norm",
+    op_counter() : "av_mag",
+    op_counter() : "av_norm",
+
 }
+
+for oper in "add,sub,mul,pow".split(","):
+    op_hash.update( {op_counter() : prefix + oper for prefix in op_cases})
+
+# we want the a, b and return types in the opcode bits
+
+1/0
+
 
 for k,v in op_hash.iteritems():
     globals()[v]=k

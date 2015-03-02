@@ -4,6 +4,68 @@ import numpy as np
 import aeev
 from _vec import vec3 as vec
 
+def dis(expr):
+    """ Byte code and stack disassembler/pretty-printer"""
+    if type(expr) is lazy_expr:
+        opcodes, doubles, arrays = expr.get_bytecode()
+    else:
+        opcodes, doubles, arrays = expr.rhs.get_bytecode()
+
+    print
+    print "op codes"
+    print "========"
+    print
+
+    for i, o in enumerate(opcodes):
+        right_heap = False
+        left_heap = False
+        result_target = False
+        aleft, aright = o & left_array, o & right_array
+        o &= ~left_array
+        o &= ~right_array
+
+        if o & right_on_heap:
+            right_heap = True
+            o &= ~right_on_heap
+        if o & left_on_heap:
+            left_heap = True
+            o &= ~left_on_heap
+        if o & result_to_target:
+            result_target = True
+            o &= ~result_to_target
+        if o & scalar_bit:
+            o = o & ~scalar_bit
+            print "{}:  literal load {} ({})".format(i,o,doubles[o])
+        if o & vector_bit:
+            o = o & ~vector_bit
+            print "{}:  vector load {} {}".format(i, o, doubles[o:o+3])
+        elif o & array_scalar_bit:
+            o = o & ~array_scalar_bit
+            print "{}:  array load {} (id: {})".format(i,o,id(arrays[o]))
+        elif o in op_hash:
+            print "{}:  {} {}{}{}{}{}".format(i, op_hash[o],
+                                           "r-target " if result_target else "",
+                                           "l-heap " if left_heap else "",
+                                           "r-heap " if right_heap else "",
+                                           "a-left " if aleft else "",
+                                           "a-right " if aright else "")
+        else:
+            print "{}:  data ({})".format(i,o)
+
+    print
+    print "scalar literals"
+    print "==============="
+    print
+    for i,d in enumerate(doubles):
+        print "{}  {}".format(i,d)
+
+    print
+    print "array literals"
+    print "==============="
+    print
+    for i,a in enumerate(arrays):
+        print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
+
 class Assignment(object):
     "an expression which can be evaluated and assigned to a result"
     def __init__(self, lhs, rhs):
@@ -180,6 +242,14 @@ class lazy_expr(object):
                 else:
                     literal_stack.append(args[0])
                     op_stack.append(scalar_bit | (len(literal_stack)-1))
+            elif op == i_vec:
+                # optimize this
+                x,y,z = args[0]
+                literal_stack.append(x)
+                literal_stack.append(y)
+                literal_stack.append(z)
+                op_stack.append(vector_bit | len(literal_stack)-3)
+
             elif op == ia_scalar or op == ia_vec:
                 if id(args[0]) in array_id_stack:
                     op_stack.append(array_scalar_bit |
