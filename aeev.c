@@ -1,4 +1,3 @@
-
 #include "Python.h"
 #include "numpy/noprefix.h"
 #include "stdio.h"

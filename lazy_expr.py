@@ -88,14 +88,15 @@ class Assignment(object):
 
 class lazy_expr(object):
     """Represents an ast node, an operator and at least one value"""
-    def typecode(left, right):
-        "returns 0, 1, 2 or 3 for a_a, a_s, s_a, s_s"
-        return left.is_scalar()*2 + right.is_scalar()
 
-    def handle_op(a, b, base_op_code):
-        code = lazy_expr.typecode(a, b)
-        if code == 3: code += 300
-        return lazy_expr((base_op_code + code, a, b))
+    def handle_op(a, b, base_op):
+        a_type = a.r_code()
+        b_type = b.r_code()
+        op_str = "{}_{}_{}".format(string_types[a_type], string_types[b_type],
+                                   base_op)
+        assert op_str in rop_hash, "invalid operation"
+        op_code = rop_hash[op_str]
+        return lazy_expr((op_code, a, b))
 
     def __init__(self, data):
         if type(data) is tuple:
@@ -103,64 +104,77 @@ class lazy_expr(object):
         elif type(data) is lazy_expr:
             self.data = data.data
         elif type(data) is float or type(data) is int:
-            self.data = (i_scalar, float(data))
+            self.data = (lit_s, float(data))
         elif type(data) is vec:
-            self.data = (i_vec, data)
+            self.data = (lit_v, data)
         elif type(data) is np.ndarray:
             if data.ndim == 1:
-                self.data = (ia_scalar, data)
+                self.data = (lit_as, data)
             else:
                 assert data.ndim == 2
                 assert data.shape[1] == 3
-                self.data = (ia_vec, data)
+                self.data = (lit_av, data)
         else:
             raise ValueError("unknown type")
 
+    def r_type(self):
+        return (self.data[0] & r_type_mask) >> r_shift
+
+    def a_code(self):
+        "returns 0, 1, 2 or 3 for a type"
+        return (self.data[0] & a_type_mask) >> a_shift
+    def b_code(self):
+        "returns 0, 1, 2 or 3 for b type"
+        return (self.data[0] & b_type_mask) >> b_shift
+    def r_code(self):
+        "returns 0, 1, 2 or 3 for return type"
+        return (self.data[0] & r_type_mask) >> r_shift
+
     def is_scalar(self):
-        "return true if this leaf should evaluate to a scalar"
-        if self.data[0] >= 500:
-            return 1
-        return 0
+        raise NotImplementedError
 
     def __eq__(self, other):
         rhs = lazy_expr(other)
-        assert self.data[0] == ia_scalar or self.data[0] == ia_vec, \
+        assert self.data[0] == lit_as or self.data[0] == lit_av, \
             "lhs must be an array"
         lhs = self.data[1]
         assert type(lhs) is np.ndarray
         return Assignment(lhs, rhs)
 
-
     def __add__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), a_a_add)
+        return lazy_expr.handle_op(self, lazy_expr(other), "add")
     def __radd__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, a_a_add)
+        return lazy_expr.handle_op(lazy_expr(other), self, "add")
 
     def __sub__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), a_a_sub)
+        return lazy_expr.handle_op(self, lazy_expr(other), "sub")
     def __rsub__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, a_a_sub)
+        return lazy_expr.handle_op(lazy_expr(other), self, "sub")
 
     def __mul__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), a_a_mul)
+        return lazy_expr.handle_op(self, lazy_expr(other), "mul")
     def __rmul__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, a_a_mul)
+        return lazy_expr.handle_op(lazy_expr(other), self, "mul")
 
     def __div__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), a_a_div)
+        return lazy_expr.handle_op(self, lazy_expr(other), "div")
     def __rdiv__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, a_a_div)
+        return lazy_expr.handle_op(lazy_expr(other), self, "div")
 
     def __pow__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), a_a_pow)
+        return lazy_expr.handle_op(self, lazy_expr(other), "pow")
     def __rpow__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, a_a_pow)
+        return lazy_expr.handle_op(lazy_expr(other), self, "pow")
 
     def __neg__(self):
-        if self.data[0] < 500:
-            return lazy_expr((a_negate, self))
-        else:
+        if self.rtype() == 0:
             return lazy_expr((s_negate, self))
+        elif self.rtype() == 1:
+            return lazy_expr((as_negate, self))
+        elif self.rtype() == 2:
+            return lazy_expr((v_negate, self))
+        elif self.rtype() == 3:
+            return lazy_expr((av_negate, self))
 
 
     def __repr__(self):
@@ -168,9 +182,9 @@ class lazy_expr(object):
             ", ".join(map(str, self.data[1:])) +  " )"
 
     def get_tuple(self):
-        if self.data[0] == i_scalar or self.data[0] == i_vec:
+        if self.data[0] == lit_s or self.data[0] == lit_v:
             return self.data
-        elif self.data[0] == ia_scalar or self.data[0] == ia_vec:
+        elif self.data[0] == lit_as or self.data[0] == lit_av:
             return self.data
         else:
             if len(self.data) == 2:
@@ -186,39 +200,27 @@ class lazy_expr(object):
         # determine if the result, left or right operand is
         # on the heap or stack.
 
-        def scalar_op(opcode):
-            assert type(opcode & ~bytecode_mask) is int
-            return '3' == str(opcode & ~bytecode_mask)[-1]
-
-        def left_is_array(opcode):
-            char = str(opcode & ~bytecode_mask)[-1]
-            return char == '0' or char == '1'
-
-        def right_is_array(opcode):
-            char = str(opcode & ~bytecode_mask)[-1]
-            return char == '0' or char == '2'
-
-
         def listit(t):
             """Convert nested tuples into nested lists"""
             return list(map(listit, t)) if isinstance(t, (list, tuple)) else t
 
         top_cell = listit(self.get_tuple())
 
+        def scalar_op(opcode):
+            return not (1<<19 & opcode)
+
         def opt_visitor(cell):
             """Add bits to bytecodes"""
             op, args = cell[0], cell[1:]
-            if scalar_op(op) or op == i_scalar or op == ia_scalar or \
-               op == i_vec or op == ia_vec:
+            if scalar_op(op) or op == lit_s or op == lit_as or \
+               op == lit_v or op == lit_av:
                 return
             flags = 0
-            if args[0][0] == ia_scalar:
-                flags |= left_on_heap
+            if args[0][0] == lit_as or args[0][0] == lit_av:
+                flags |= a_on_heap
             if len(args) == 2:
-                if args[1][0] == ia_scalar:
-                    flags |= right_on_heap
-            if left_is_array(op): flags |= left_array
-            if right_is_array(op): flags |= right_array
+                if args[1][0] == lit_as or args[1][0] == lit_av:
+                    flags |= b_on_heap
             cell[0] |= flags
             for arg in args:
                 opt_visitor(arg)
@@ -226,8 +228,8 @@ class lazy_expr(object):
         opt_visitor(top_cell)
 
         # write final result to heap
-        if not scalar_op(top_cell[0]):
-            top_cell[0] |= result_to_target;
+        if self.r_type() == 1 or self.r_type() == 3:
+            top_cell[0] |= result_to_heap
 
         literal_stack = []
         array_id_stack = []
@@ -236,29 +238,27 @@ class lazy_expr(object):
 
         def visitor(cell, literal_stack, op_stack, array_stack):
             op, args = cell[0], cell[1:]
-            if op == i_scalar:
+            if op == lit_s:
                 if args[0] in literal_stack:
-                    op_stack.append(scalar_bit | literal_stack.index(args[0]))
+                    op_stack.append(lit_s | literal_stack.index(args[0]))
                 else:
                     literal_stack.append(args[0])
-                    op_stack.append(scalar_bit | (len(literal_stack)-1))
-            elif op == i_vec:
+                    op_stack.append(lit_s | (len(literal_stack)-1))
+            elif op == lit_v:
                 # optimize this
                 x,y,z = args[0]
                 literal_stack.append(x)
                 literal_stack.append(y)
                 literal_stack.append(z)
-                op_stack.append(vector_bit | len(literal_stack)-3)
+                op_stack.append(lit_v | len(literal_stack)-3)
 
-            elif op == ia_scalar or op == ia_vec:
+            elif op == lit_as or op == lit_av:
                 if id(args[0]) in array_id_stack:
-                    op_stack.append(array_scalar_bit |
-                                    array_id_stack.index(id(args[0])))
+                    op_stack.append(op | array_id_stack.index(id(args[0])))
                 else:
                     array_stack.append(args[0])
                     array_id_stack.append(id(args[0]))
-                    op_stack.append(array_scalar_bit |
-                                    array_id_stack.index(id(args[0])))
+                    op_stack.append(op | array_id_stack.index(id(args[0])))
 
             else:
                 for a in args:
