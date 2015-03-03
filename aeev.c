@@ -182,26 +182,26 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 double *b = 0; // right
                 int case_code=0;
                 // adapter for testing
-                //if ((op & ~A_AV) == A_AV) case_code     |= 1 << 6;
-                //if ((op & ~B_AV) == B_AV) case_code     |= 1 << 5;
-                if (op & A_AS) case_code     |= 1 << 4;
-                if (op & B_AS) case_code     |= 1 << 3;
+                if ((op & A_AV) == A_AV) case_code      |= 1 << 6;
+                else if (op & A_AS) case_code           |= 1 << 4;
+                if ((op & B_AV) == B_AV) case_code      |= 1 << 5;
+                else if (op & B_AS) case_code           |= 1 << 3;
                 if (op & A_ON_HEAP) case_code           |= 1 << 2;
                 if (op & B_ON_HEAP) case_code           |= 1 << 1;
                 if (op & RESULT_TO_HEAP) case_code      |= 1 << 0;
 
                 switch (case_code) {
 
-                case 0: // 00000 scalar scalar op
-                    break;
-                /* case 1: // 00001 */
-                /* case 2: // 00010 */
-                /* case 3: // 00011 */
-                /* case 4: // 00100 */
-                /* case 5: // 00101 */
-                /* case 6: // 00110 */
-                /* case 7: // 00111 */
-                /*     INVALID; */
+                    case 0: // 00000 scalar scalar op
+                        break;
+                    /* case 1: // 00001 */
+                    /* case 2: // 00010 */
+                    /* case 3: // 00011 */
+                    /* case 4: // 00100 */
+                    /* case 5: // 00101 */
+                    /* case 6: // 00110 */
+                    /* case 7: // 00111 */
+                    /*     INVALID; */
                 case 8: // 01000 a-scalar b-array-stack, r-stack
                     res = astack[astack_ptr-1];
                     b = astack[astack_ptr-1];
@@ -221,11 +221,11 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
                     alstack_ptr--;
                     break;
-                /* case 12: // 01100 */
-                /* case 13: // 01101 */
-                /* case 14: // 01110 */
-                /* case 15: // 01111 */
-                /*     INVALID; */
+                    /* case 12: // 01100 */
+                    /* case 13: // 01101 */
+                    /* case 14: // 01110 */
+                    /* case 15: // 01111 */
+                    /*     INVALID; */
                 case 16: // 10000 a-array-stack, b-scalar, r-stack
                     res = astack[astack_ptr-1];
                     a = astack[astack_ptr-1];
@@ -248,9 +248,9 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
                     alstack_ptr--;
                     break;
-                /* case 22: // 10110 */
-                /* case 23: // 10111 */
-                /*     INVALID; */
+                    /* case 22: // 10110 */
+                    /* case 23: // 10111 */
+                    /*     INVALID; */
                 case 24: // 11000 a-stack, b-stack, r-stack
                     res = astack[astack_ptr-2];
                     a = astack[astack_ptr-2];
@@ -312,100 +312,166 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     b = astack[astack_ptr-3];
                     astack_ptr -= 3;
                     break;
-                //case  34: // 0100010
-                //case  35: // 0100011
-                //case  36: // 0100100
-                //case  37: // 0100101
-                //case  38: // 0100110
-                //case  39: // 0100111
-                //case  40: // 0101000
-                //case  41: // 0101001
-                //case  42: // 0101010
-                //case  43: // 0101011
-                //case  44: // 0101100
-                //case  45: // 0101101
-                //case  46: // 0101110
-                //case  47: // 0101111
-                //case  48: // 0110000
-                //case  49: // 0110001
-                //case  50: // 0110010
-                //case  51: // 0110011
-                //case  52: // 0110100
-                //case  53: // 0110101
-                //case  54: // 0110110
-                //case  55: // 0110111
-                //case  56: // 0111000
-                //case  57: // 0111001
-                //case  58: // 0111010
-                //case  59: // 0111011
-                //case  60: // 0111100
-                //case  61: // 0111101
-                //case  62: // 0111110
-                //case  63: // 0111111
-                //case  64: // 1000000
-                //case  65: // 1000001
-                //case  66: // 1000010
-                //case  67: // 1000011
-                //case  68: // 1000100
-                //case  69: // 1000101
-                //case  70: // 1000110
-                //case  71: // 1000111
-                //case  72: // 1001000
-                //case  73: // 1001001
-                //case  74: // 1001010
-                //case  75: // 1001011
-                //case  76: // 1001100
-                //case  77: // 1001101
-                //case  78: // 1001110
-                //case  79: // 1001111
-                //case  80: // 1010000
-                //case  81: // 1010001
-                //case  82: // 1010010
-                //case  83: // 1010011
-                //case  84: // 1010100
-                //case  85: // 1010101
-                //case  86: // 1010110
-                //case  87: // 1010111
-                //case  88: // 1011000
-                //case  89: // 1011001
-                //case  90: // 1011010
-                //case  91: // 1011011
-                //case  92: // 1011100
-                //case  93: // 1011101
-                //case  94: // 1011110
-                //case  95: // 1011111
-                //case  96: // 1100000
-                //case  97: // 1100001
-                //case  98: // 1100010
-                //case  99: // 1100011
-                //case 100: // 1100100
-                //case 101: // 1100101
-                //case 102: // 1100110
-                //case 103: // 1100111
-                //case 104: // 1101000
-                //case 105: // 1101001
-                //case 106: // 1101010
-                //case 107: // 1101011
-                //case 108: // 1101100
-                //case 109: // 1101101
-                //case 110: // 1101110
-                //case 111: // 1101111
-                //case 112: // 1110000
-                //case 113: // 1110001
-                //case 114: // 1110010
-                //case 115: // 1110011
-                //case 116: // 1110100
-                //case 117: // 1110101
-                //case 118: // 1110110
-                //case 119: // 1110111
-                //case 120: // 1111000
-                //case 121: // 1111001
-                //case 122: // 1111010
-                //case 123: // 1111011
-                //case 124: // 1111100
-                //case 125: // 1111101
-                //case 126: // 1111110
-                //case 127: // 1111111
+                case  34: // 0100010 a-s, b-av, a-stack, b-heap, r-stack
+                    res = astack[astack_ptr];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    astack_ptr += 3;
+                    alstack_ptr--;
+                    break;
+                case  35: // 0100011 a-s, b-av, a-stack, b-heap, r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+                case  36: // 0100100 a-s, b-av, a-heap, b-stack, r-stack
+                case  37: // 0100101 a-s, b-av, a-heap, b-stack, r-heap
+                case  38: // 0100110 a-s, b-av, a-heap, b-heap, r-stack
+                case  39: // 0100111 a-s, b-av, a-heap, b-heap, r-heap
+                case  40: // 0101000 a-s, b-av
+                case  41: // 0101001
+                case  42: // 0101010
+                case  43: // 0101011
+                case  44: // 0101100
+                case  45: // 0101101
+                case  46: // 0101110
+                case  47: // 0101111
+                    INVALID;
+
+                case  48: // 0110000 a-as, b-av, a-stack, b-stack, r-stack
+                    res = astack[astack_ptr-4];
+                    a = astack[astack_ptr-4];
+                    b = astack[astack_ptr-3];
+                    astack_ptr -= 1;
+                    break;
+                case  49: // 0110001  a-as, b-av, a-stack, b-stack, r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-4];
+                    b = astack[astack_ptr-3];
+                    astack_ptr -= 4;
+                    break;
+                case  50: // 0110010  a-as, b-av, a-stack, b-heap, r-stack
+                    res = astack[astack_ptr-1];
+                    a = astack[astack_ptr-1];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    astack_ptr+=2;
+                    // #fail corrupts stack! need to make a copy of a
+                    // can do it here
+                    break;
+                case  51: // 0110011  a-as, b-av, a-stack, b-heap, r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-1];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    astack_ptr--;
+                    break;
+
+                case  52: // 0110100 a-as, b-av, a-heap, b-stack, r-stack
+                    res = astack[astack_ptr-3];
+                    a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    b = astack[astack_ptr-3];
+                    alstack_ptr -= 1;
+                    break;
+
+                case  53: // 0110101 a-as, b-av, a-heap, b-stack, r-stack
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    b = astack[astack_ptr-3];
+                    alstack_ptr -= 1;
+                    astack_ptr -= 3;
+                    break;
+
+                case  54: // 0110110 a-as, b-av, a-heap, b-heap, r-stack
+                    res = astack[astack_ptr];
+                    a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr -= 2;
+                    astack_ptr += 3;
+                    break;
+
+
+                case  55: // 0110111 a-as, b-av, a-heap, b-heap, r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr -= 2;
+                    break;
+
+// a-av b-av a-as b-as a-heap b-heap r-heap
+                case  56: // 0111000
+                case  57: // 0111001
+                case  58: // 0111010
+                case  59: // 0111011
+                case  60: // 0111100
+                case  61: // 0111101
+                case  62: // 0111110
+                case  63: // 0111111
+                    INVALID;
+
+                    //case  64: // 1000000
+                    //case  65: // 1000001
+                    //case  66: // 1000010
+                    //case  67: // 1000011
+                    //case  68: // 1000100
+                    //case  69: // 1000101
+                    //case  70: // 1000110
+                    //case  71: // 1000111
+                    //case  72: // 1001000
+                    //case  73: // 1001001
+                    //case  74: // 1001010
+                    //case  75: // 1001011
+                    //case  76: // 1001100
+                    //case  77: // 1001101
+                    //case  78: // 1001110
+                    //case  79: // 1001111
+                    //case  80: // 1010000
+                    //case  81: // 1010001
+                    //case  82: // 1010010
+                    //case  83: // 1010011
+                    //case  84: // 1010100
+                    //case  85: // 1010101
+                    //case  86: // 1010110
+                    //case  87: // 1010111
+                    //case  88: // 1011000
+                    //case  89: // 1011001
+                    //case  90: // 1011010
+                    //case  91: // 1011011
+                    //case  92: // 1011100
+                    //case  93: // 1011101
+                    //case  94: // 1011110
+                    //case  95: // 1011111
+                    //case  96: // 1100000
+                    //case  97: // 1100001
+                    //case  98: // 1100010
+                    //case  99: // 1100011
+                    //case 100: // 1100100
+                    //case 101: // 1100101
+                    //case 102: // 1100110
+                    //case 103: // 1100111
+                    //case 104: // 1101000
+                    //case 105: // 1101001
+                    //case 106: // 1101010
+                    //case 107: // 1101011
+                    //case 108: // 1101100
+                    //case 109: // 1101101
+                    //case 110: // 1101110
+                    //case 111: // 1101111
+                    //case 112: // 1110000
+                    //case 113: // 1110001
+                    //case 114: // 1110010
+                    //case 115: // 1110011
+                    //case 116: // 1110100
+                    //case 117: // 1110101
+                    //case 118: // 1110110
+                    //case 119: // 1110111
+                    //case 120: // 1111000
+                    //case 121: // 1111001
+                    //case 122: // 1111010
+                    //case 123: // 1111011
+                    //case 124: // 1111100
+                    //case 125: // 1111101
+                    //case 126: // 1111110
+                    //case 127: // 1111111
 
                 }
 
@@ -544,8 +610,6 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
         return Py_BuildValue("(ddd)", stack[0], stack[1], stack[2]);
     return PyFloat_FromDouble(stack[0]);
 }
-
-
 
 
 static PyObject *call_test(PyObject *self, PyObject *args)
