@@ -8,33 +8,33 @@ double eval_double(PyObject *cell, int index)
     int op_code = PyInt_AS_LONG(PyTuple_GET_ITEM(cell,0));
     switch (op_code){
 
-    case A_A_ADD: case A_S_ADD: case S_A_ADD: case S_S_ADD:
+    case AS_AS_ADD: case AS_S_ADD: case S_AS_ADD: case S_S_ADD:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) +
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case A_A_SUB: case A_S_SUB: case S_A_SUB: case S_S_SUB:
+    case AS_AS_SUB: case AS_S_SUB: case S_AS_SUB: case S_S_SUB:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) -
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case A_A_MUL: case A_S_MUL: case S_A_MUL: case S_S_MUL:
+    case AS_AS_MUL: case AS_S_MUL: case S_AS_MUL: case S_S_MUL:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) *
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case A_A_DIV: case A_S_DIV: case S_A_DIV: case S_S_DIV:
+    case AS_AS_DIV: case AS_S_DIV: case S_AS_DIV: case S_S_DIV:
         return eval_double(PyTuple_GET_ITEM(cell, 1), index) /
                eval_double(PyTuple_GET_ITEM(cell, 2), index);
 
-    case A_A_POW: case A_S_POW: case S_A_POW: case S_S_POW:
+    case AS_AS_POW: case AS_S_POW: case S_AS_POW: case S_S_POW:
         return pow(eval_double(PyTuple_GET_ITEM(cell, 1), index),
                    eval_double(PyTuple_GET_ITEM(cell, 2), index));
 
-    case A_NEGATE: case S_NEGATE:
+    case AS_NEGATE: case S_NEGATE:
         return -eval_double(PyTuple_GET_ITEM(cell, 1), index);
 
-    case I_SCALAR:
+    case LIT_S:
         return PyFloat_AS_DOUBLE(PyTuple_GET_ITEM(cell, 1));
 
-    case IA_SCALAR:
+    case LIT_AS:
         return ((double *)((PyArrayObject *)
                            PyTuple_GET_ITEM(cell, 1))->data)[index];
 
@@ -67,7 +67,6 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
     int size=0;
     int i=0;
     PyArrayObject *ar;
-
     if (!PyArg_ParseTuple(args, "OO", &cell, &target))
         return NULL;
     ar = (PyArrayObject *)PyArray_FROMANY(target,
@@ -159,13 +158,12 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
             chunk = final_chunk;
         for (j=0; j<nops; j++) {
             long op = c_opcodes[j];
-
-            if (op & SCALAR_BIT) {
-                dstack[dstack_ptr] = c_double_literals[op & ~SCALAR_BIT];
+            if ((op &~ OP_MASK) == LIT_S) {
+                dstack[dstack_ptr] = c_double_literals[op & ~BYTECODE_MASK];
                 dstack_ptr++;
             }
-            else if (op & ARRAY_SCALAR_BIT) {
-                alstack[alstack_ptr] = op & ~ARRAY_SCALAR_BIT;
+            else if ((op &~ OP_MASK) == LIT_AS) {
+                alstack[alstack_ptr] = op & ~BYTECODE_MASK;
                 alstack_ptr++;
             }
             else  // normal op
@@ -173,7 +171,13 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 double *res=0; // array result
                 double *a = 0; // left
                 double *b = 0; // right
-                int case_code = (op & CODE_MASK) >> 13;
+                int case_code=0;
+                // adapter for testing
+                if (op & A_AS) case_code               |= 1 << 4;
+                if (op & B_AS) case_code               |= 1 << 3;
+                if (op & A_ON_HEAP) case_code          |= 1 << 2;
+                if (op & B_ON_HEAP) case_code          |= 1 << 1;
+                if (op & RESULT_TO_HEAP) case_code     |= 1 << 0;
 
                 switch (case_code) {
 
@@ -307,23 +311,23 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 }
 
                 //printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
-                switch (op & ~BYTECODE_MASK) {
+                switch (op & ~HEAP_MASK) {
                     OPERATOR(ADD, +);
                     OPERATOR(SUB, -);
                     OPERATOR(MUL, *);
                     OPERATOR(DIV, /);
 
-                case A_A_POW:
+                case AS_AS_POW:
                     for (k=0; k<chunk; k++) {res[k] = pow(a[k], b[k]);}
                     break;
 
-                case A_S_POW:
+                case AS_S_POW:
                     for (k=0; k<chunk; k++) {
                         res[k] = pow(a[k], dstack[dstack_ptr-1]);
                     }
                     dstack_ptr--;
                     break;
-                case S_A_POW:
+                case S_AS_POW:
                     for (k=0; k<chunk; k++) {
                         res[k] = pow(dstack[dstack_ptr-1], b[k]);
                     }
@@ -337,10 +341,11 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 case S_NEGATE:
                     dstack[dstack_ptr-1] = -dstack[dstack_ptr-1];
                     break;
-                case A_NEGATE:
+                case AS_NEGATE:
                     for (k=0; k<chunk; k++) { res[k] = -a[k]; }
                     break;
                 default:
+                    printf("%i %i\n", op, op & ~HEAP_MASK);
                     INVALID;
                 }
             }
@@ -368,18 +373,18 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
     n_opt = PyTuple_GET_SIZE(ops);
     for (i=0; i<n_opt; i++) {
         c_op = PyInt_AS_LONG(PyTuple_GET_ITEM(ops, i));
-        if (c_op & SCALAR_BIT) {
+        if ((c_op &~ OP_MASK) == LIT_S) {
             stack[stack_pointer] = PyFloat_AS_DOUBLE(
-                PyTuple_GET_ITEM(literals, c_op & ~SCALAR_BIT));
+                PyTuple_GET_ITEM(literals, c_op & ~BYTECODE_MASK));
             stack_pointer++;
         } else {
             switch (c_op) {
-            case A_A_ADD: case A_S_ADD: case S_A_ADD: case S_S_ADD:
+            case AS_AS_ADD: case AS_S_ADD: case S_AS_ADD: case S_S_ADD:
                 stack[stack_pointer-2] = stack[stack_pointer-2] +
                                          stack[stack_pointer-1];
                 stack_pointer--;
                 break;
-            case A_A_POW: case A_S_POW: case S_A_POW: case S_S_POW:
+            case AS_AS_POW: case AS_S_POW: case S_AS_POW: case S_S_POW:
                 stack[stack_pointer-2] = pow(stack[stack_pointer-2],
                                              stack[stack_pointer-1]);
                 stack_pointer--;

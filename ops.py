@@ -43,7 +43,8 @@ op_mask = ~bytecode_mask
 heap_mask = 1 << 26 | 1 << 25 | 1 << 24
 
 
-def wb(n):
+def which_bits(n):
+    """ return a list of which bits are set in the int n. """
     s = "{:b}".format(n)[::-1]
     res = []
     for i,c in enumerate(s):
@@ -97,7 +98,7 @@ op_hash = {
 }
 
 
-for oper in "add,sub,mul,pow".split(","):
+for oper in "add,sub,mul,div,pow".split(","):
     for op0, op1 in op_cases:
         op_hash.update( {op_counter(flags(op0, op1)) :
                          "{}_{}_{}".format(op0,op1,oper)})
@@ -124,8 +125,12 @@ for k,v in op_hash.iteritems():
 def _write_c_header():
     print "writing opcodes to c header file"
     with open("ops.h", "w") as f:
-        for k,v in op_hash.iteritems():
-            print >> f, "#define {} {}".format(v.upper(), k)
+        # for k,v in op_hash.iteritems():
+        #     print >> f, "#define {} {}".format(v.upper(), k)
+        # print >> f, "// other stuff"
+        for k,v in globals().iteritems():
+            if type(v) is int:
+                print >> f, "#define {} {}".format(k.upper(), v)
 
 
 

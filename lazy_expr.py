@@ -34,9 +34,9 @@ def dis(expr):
             template = "{}:  {} types({} <- {}.{}) flags:  {}{}{}"
             out = template.format(i, op_hash[o &~ heap_mask],
                                   r_stype(o), a_stype(o), b_stype(o),
-                                  "r-target " if r_heap(o) else "",
-                                  "l-heap " if a_heap(o) else "",
-                                  "r-heap " if b_heap(o) else "")
+                                  "r-heap " if r_heap(o) else "",
+                                  "a-heap " if a_heap(o) else "",
+                                  "b-heap " if b_heap(o) else "")
             print out
         else:
             print "{}:  data ({})".format(i,o)
@@ -156,13 +156,13 @@ class lazy_expr(object):
         return lazy_expr.handle_op(lazy_expr(other), self, "pow")
 
     def __neg__(self):
-        if self.rtype() == 0:
+        if self.r_type() == 0:
             return lazy_expr((s_negate, self))
-        elif self.rtype() == 1:
+        elif self.r_type() == 1:
             return lazy_expr((as_negate, self))
-        elif self.rtype() == 2:
+        elif self.r_type() == 2:
             return lazy_expr((v_negate, self))
-        elif self.rtype() == 3:
+        elif self.r_type() == 3:
             return lazy_expr((av_negate, self))
 
 

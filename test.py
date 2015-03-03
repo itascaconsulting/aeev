@@ -38,15 +38,15 @@ assert aeev.eval(expr.get_tuple()) == res
 
 
 # 1+2
-expr = (s_s_add, (i_scalar, 1.0), (i_scalar, 2.0))
+expr = (s_s_add, (lit_s, 1.0), (lit_s, 2.0))
 print expr
 print aeev.eval(expr)
 assert aeev.eval(expr) == 1.0+2.0
 
 # (1.23+5.0)**2 - 5e2/0.1
-expr = (s_s_sub, (s_s_pow, (s_s_add, (i_scalar, 1.23), (i_scalar, 5.0)),
-                 (i_scalar, 2.0)),
-        (s_s_div, (i_scalar, 5e2), (i_scalar, 0.1)))
+expr = (s_s_sub, (s_s_pow, (s_s_add, (lit_s, 1.23), (lit_s, 5.0)),
+                 (lit_s, 2.0)),
+        (s_s_div, (lit_s, 5e2), (lit_s, 0.1)))
 print expr, (1.23+5.0)**2 - 5e2/0.1
 
 print aeev.eval(expr)
@@ -63,9 +63,9 @@ a=lazy_expr(1.0)
 _b = np.ones(3)
 b=lazy_expr(_b)
 
-assert (a+2).get_tuple() == (s_s_add, (i_scalar, 1), (i_scalar, 2))
-assert (a+b).get_tuple() == (s_a_add, (i_scalar, 1), (ia_scalar, _b))
-assert (a+b**2).get_tuple() == (s_a_add,
-                                (i_scalar, 1.0 ),
-                                (a_s_pow, (ia_scalar, _b),
-                                 (i_scalar, 2.0)))
+assert (a+2).get_tuple() == (s_s_add, (lit_s, 1), (lit_s, 2))
+assert (a+b).get_tuple() == (s_as_add, (lit_s, 1), (lit_as, _b))
+assert (a+b**2).get_tuple() == (s_as_add,
+                                (lit_s, 1.0 ),
+                                (as_s_pow, (lit_as, _b),
+                                 (lit_s, 2.0)))
