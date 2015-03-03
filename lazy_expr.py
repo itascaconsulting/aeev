@@ -17,38 +17,27 @@ def dis(expr):
     print
 
     for i, o in enumerate(opcodes):
-        right_heap = False
-        left_heap = False
-        result_target = False
-        aleft, aright = o & left_array, o & right_array
-        o &= ~left_array
-        o &= ~right_array
 
-        if o & right_on_heap:
-            right_heap = True
-            o &= ~right_on_heap
-        if o & left_on_heap:
-            left_heap = True
-            o &= ~left_on_heap
-        if o & result_to_target:
-            result_target = True
-            o &= ~result_to_target
-        if o & scalar_bit:
-            o = o & ~scalar_bit
+        if (o &~ op_mask) == lit_s:
+            o = o & ~bytecode_mask
             print "{}:  literal load {} ({})".format(i,o,doubles[o])
-        if o & vector_bit:
-            o = o & ~vector_bit
+        elif (o &~ op_mask) == lit_v:
+            o = o & ~bytecode_mask
             print "{}:  vector load {} {}".format(i, o, doubles[o:o+3])
-        elif o & array_scalar_bit:
-            o = o & ~array_scalar_bit
-            print "{}:  array load {} (id: {})".format(i,o,id(arrays[o]))
-        elif o in op_hash:
-            print "{}:  {} {}{}{}{}{}".format(i, op_hash[o],
-                                           "r-target " if result_target else "",
-                                           "l-heap " if left_heap else "",
-                                           "r-heap " if right_heap else "",
-                                           "a-left " if aleft else "",
-                                           "a-right " if aright else "")
+        elif (o & ~op_mask) == lit_as:
+            o = o & ~bytecode_mask
+            print "{}:  array scalar load {} (id: {})".format(i,o,id(arrays[o]))
+        elif (o & ~op_mask) == lit_av:
+            o = o & ~bytecode_mask
+            print "{}:  array vector load {} (id: {})".format(i,o,id(arrays[o]))
+        elif (o &~ heap_mask) in op_hash:
+            template = "{}:  {} types({} <- {}.{}) flags:  {}{}{}"
+            out = template.format(i, op_hash[o &~ heap_mask],
+                                  r_stype(o), a_stype(o), b_stype(o),
+                                  "r-target " if r_heap(o) else "",
+                                  "l-heap " if a_heap(o) else "",
+                                  "r-heap " if b_heap(o) else "")
+            print out
         else:
             print "{}:  data ({})".format(i,o)
 
@@ -182,6 +171,7 @@ class lazy_expr(object):
             ", ".join(map(str, self.data[1:])) +  " )"
 
     def get_tuple(self):
+        """ return ast as nested tuples """
         if self.data[0] == lit_s or self.data[0] == lit_v:
             return self.data
         elif self.data[0] == lit_as or self.data[0] == lit_av:
@@ -207,7 +197,7 @@ class lazy_expr(object):
         top_cell = listit(self.get_tuple())
 
         def scalar_op(opcode):
-            return not (1<<19 & opcode)
+            return r_itype(opcode) == 0
 
         def opt_visitor(cell):
             """Add bits to bytecodes"""

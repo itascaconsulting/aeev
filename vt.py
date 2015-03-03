@@ -1,6 +1,7 @@
 import numpy as np
 from _vec import vec3 as vec
 from lazy_expr import lazy_expr, dis
+from ops import *
 
 _a = vec((1,2,3))
 _b = np.array(((1,2,3.0),(4,5,6.0), (7,8,9.0)))
