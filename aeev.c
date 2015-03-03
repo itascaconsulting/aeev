@@ -409,11 +409,15 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     INVALID;
 
                     //case  64: // 1000000
-                    //case  65: // 1000001
+                    //case  65: // 1000001 a-av b-s a-stack b-stack r-heap
                     //case  66: // 1000010
                     //case  67: // 1000011
                     //case  68: // 1000100
-                    //case  69: // 1000101
+                case  69: // 1000101 a-av, b-s, a-heap, r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
                     //case  70: // 1000110
                     //case  71: // 1000111
                     //case  72: // 1001000
@@ -424,22 +428,25 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     //case  77: // 1001101
                     //case  78: // 1001110
                     //case  79: // 1001111
-                    //case  80: // 1010000
-                    //case  81: // 1010001
-                    //case  82: // 1010010
-                    //case  83: // 1010011
-                    //case  84: // 1010100
-                    //case  85: // 1010101
-                    //case  86: // 1010110
-                    //case  87: // 1010111
-                    //case  88: // 1011000
-                    //case  89: // 1011001
-                    //case  90: // 1011010
-                    //case  91: // 1011011
-                    //case  92: // 1011100
-                    //case  93: // 1011101
-                    //case  94: // 1011110
-                    //case  95: // 1011111
+
+                case  80: // 1010000
+                case  81: // 1010001
+                case  82: // 1010010
+                case  83: // 1010011
+                case  84: // 1010100
+                case  85: // 1010101
+                case  86: // 1010110
+                case  87: // 1010111
+                case  88: // 1011000
+                case  89: // 1011001
+                case  90: // 1011010
+                case  91: // 1011011
+                case  92: // 1011100
+                case  93: // 1011101
+                case  94: // 1011110
+                case  95: // 1011111
+                    INVALID;
+
                     //case  96: // 1100000
                     //case  97: // 1100001
                     //case  98: // 1100010
@@ -448,30 +455,7 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     //case 101: // 1100101
                     //case 102: // 1100110
                     //case 103: // 1100111
-                    //case 104: // 1101000
-                    //case 105: // 1101001
-                    //case 106: // 1101010
-                    //case 107: // 1101011
-                    //case 108: // 1101100
-                    //case 109: // 1101101
-                    //case 110: // 1101110
-                    //case 111: // 1101111
-                    //case 112: // 1110000
-                    //case 113: // 1110001
-                    //case 114: // 1110010
-                    //case 115: // 1110011
-                    //case 116: // 1110100
-                    //case 117: // 1110101
-                    //case 118: // 1110110
-                    //case 119: // 1110111
-                    //case 120: // 1111000
-                    //case 121: // 1111001
-                    //case 122: // 1111010
-                    //case 123: // 1111011
-                    //case 124: // 1111100
-                    //case 125: // 1111101
-                    //case 126: // 1111110
-                    //case 127: // 1111111
+
 
                 }
 
