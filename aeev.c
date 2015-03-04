@@ -92,6 +92,7 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
 #define CHUNK_SIZE 256
 #define GET_HEAP_PTR(arg) (double *) PyArray_DATA((PyArrayObject *) PyTuple_GET_ITEM(array_literals, alstack[arg]))
 #define INVALID PyErr_SetString(PyExc_ValueError, "invalid bytecode"); return NULL;
+#define STACK_DEPTH 12
 #include "makeop.h"
 static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 {
@@ -100,9 +101,9 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     PyObject *array_literals=0;
     PyObject *target=0;
     double *c_double_literals=0;
-    int alstack[16];
-    double astack[8][CHUNK_SIZE];
-    double dstack[16];
+    int alstack[STACK_DEPTH];
+    double astack[STACK_DEPTH][CHUNK_SIZE];
+    double dstack[STACK_DEPTH];
     int dstack_ptr=0;
     int astack_ptr=0;
     int alstack_ptr=0;
@@ -153,6 +154,11 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 
     c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
     for (i=0; i<outside_loops+1; i++) {
+        if (alstack_ptr < 0 || astack_ptr < 0) {
+            PyErr_SetString(PyExc_ValueError, "stack corruption.");
+            return NULL;
+        }
+
         int chunk = CHUNK_SIZE;
         if (i==outside_loops)
             chunk = final_chunk;
@@ -191,7 +197,6 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 if (op & RESULT_TO_HEAP) case_code      |= 1 << 0;
 
                 switch (case_code) {
-
                     case 0: // 00000 scalar scalar op
                         break;
                     /* case 1: // 00001 */
@@ -342,6 +347,8 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     a = astack[astack_ptr-4];
                     b = astack[astack_ptr-3];
                     astack_ptr -= 1;
+                    PyErr_SetString(PyExc_ValueError, "Stack corrupt (0).");
+                    return NULL;
                     break;
                 case  49: // 0110001  a-as, b-av, a-stack, b-stack, r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
@@ -355,6 +362,8 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
                     alstack_ptr--;
                     astack_ptr+=2;
+                    PyErr_SetString(PyExc_ValueError, "Stack corrupt (1).");
+                    return NULL;
                     // #fail corrupts stack! need to make a copy of a
                     // can do it here
                     break;
@@ -372,15 +381,13 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     b = astack[astack_ptr-3];
                     alstack_ptr -= 1;
                     break;
-
-                case  53: // 0110101 a-as, b-av, a-heap, b-stack, r-stack
+                case  53: // 0110101 a-as, b-av, a-heap, b-stack, r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
                     a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
                     b = astack[astack_ptr-3];
                     alstack_ptr -= 1;
                     astack_ptr -= 3;
                     break;
-
                 case  54: // 0110110 a-as, b-av, a-heap, b-heap, r-stack
                     res = astack[astack_ptr];
                     a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
@@ -388,8 +395,6 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     alstack_ptr -= 2;
                     astack_ptr += 3;
                     break;
-
-
                 case  55: // 0110111 a-as, b-av, a-heap, b-heap, r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
                     a = GET_HEAP_PTR(alstack_ptr-2) + i * CHUNK_SIZE;
@@ -397,7 +402,6 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     alstack_ptr -= 2;
                     break;
 
-// a-av b-av a-as b-as a-heap b-heap r-heap
                 case  56: // 0111000
                 case  57: // 0111001
                 case  58: // 0111010
@@ -408,26 +412,86 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 case  63: // 0111111
                     INVALID;
 
-                    //case  64: // 1000000
-                    //case  65: // 1000001 a-av b-s a-stack b-stack r-heap
-                    //case  66: // 1000010
-                    //case  67: // 1000011
-                    //case  68: // 1000100
+                case  64: // 1000000 a-av b-s a-stack b-stack r-stack
+                    res = astack[astack_ptr-3];
+                    a = astack[astack_ptr-3];
+                    break;
+                case  65: // 1000001 a-av b-s a-stack b-stack r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-3];
+                    astack_ptr -= 3;
+                    break;
+                case  66: // 1000010
+                case  67: // 1000011
+                    INVALID;
+                case  68: // 1000100 a-av, b-s, a-heap, r-stack
+                    res = astack[astack_ptr];
+                    a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    astack_ptr += 3;
+                    alstack_ptr--;
+                    break;
                 case  69: // 1000101 a-av, b-s, a-heap, r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
                     a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
                     alstack_ptr--;
                     break;
-                    //case  70: // 1000110
-                    //case  71: // 1000111
-                    //case  72: // 1001000
-                    //case  73: // 1001001
-                    //case  74: // 1001010
-                    //case  75: // 1001011
-                    //case  76: // 1001100
-                    //case  77: // 1001101
-                    //case  78: // 1001110
-                    //case  79: // 1001111
+                case  70: // 1000110
+                case  71: // 1000111
+                    INVALID;
+                case  72: // 1001000 a-av b-as a-stack b-stack r-stack
+                    res = astack[astack_ptr-4];
+                    a = astack[astack_ptr-4];
+                    b = astack[astack_ptr-1];
+                    astack_ptr--;
+                    break;
+                case  73: // 1001001 a-av b-as a-stack b-stack r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-4];
+                    b = astack[astack_ptr-1];
+                    astack_ptr -= 4;
+                    break;
+                case  74: // 1001010 a-av b-as a-stack b-heap r-stack
+                    res = astack[astack_ptr-3];
+                    a = astack[astack_ptr-3];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+                case  75: // 1001011 a-av b-as a-stack b-heap r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-3];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+                case  76: // 1001100 a-av b-as a-heap b-stack r-stack
+                    res = astack[astack_ptr-1];
+                    a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    b = astack[astack_ptr-1];
+                    alstack_ptr--;
+                    astack_ptr += 2;
+                    PyErr_SetString(PyExc_ValueError, "Stack corrupt (2).");
+                    return NULL;
+                    // danger overwrite here -- copy b -- see case 50
+                    break;
+                case  77: // 1001101 a-av b-as a-heap b-stack r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    b = astack[astack_ptr-1];
+                    astack_ptr--;
+                    alstack_ptr--;
+                    break;
+                case  78: // 1001110 a-av b-as a-heap b-heap r-stack
+                    res = astack[astack_ptr];
+                    a = GET_HEAP_PTR(alstack_ptr-2) + 3*i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr -= 2;
+                    astack_ptr += 3;
+                    break;
+                case  79: // 1001111 a-av b-as a-heap b-heap r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-2) + 3*i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
+                    alstack_ptr -= 2;
+                    break;
 
                 case  80: // 1010000
                 case  81: // 1010001
@@ -447,16 +511,67 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 case  95: // 1011111
                     INVALID;
 
-                    //case  96: // 1100000
-                    //case  97: // 1100001
-                    //case  98: // 1100010
-                    //case  99: // 1100011
-                    //case 100: // 1100100
-                    //case 101: // 1100101
-                    //case 102: // 1100110
-                    //case 103: // 1100111
+// a-av b-av a-as b-as a-heap b-heap r-heap
+                case  96: // 1100000 a-av b-av a-stack b-stack r-stack
+                    res = astack[astack_ptr-6];
+                    a = astack[astack_ptr-6];
+                    b = astack[astack_ptr-3];
+                    astack_ptr -= 3;
+                    break;
+                case  97: // 1100001 a-av b-av a-stack b-stack r-stack
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-6];
+                    b = astack[astack_ptr-3];
+                    astack_ptr -= 6;
+                    break;
+                case  98: // 1100010 a-av b-av a-stack b-heap r-stack
+                    res = astack[astack_ptr-3];
+                    a = astack[astack_ptr-3];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    break;
+                case  99: // 1100011 a-av b-av a-stack b-heap r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = astack[astack_ptr-3];
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr--;
+                    astack_ptr -= 3;
+                    break;
+                case 100: // 1100100 a-av b-av a-heap b-stack r-stack
+                    res = astack[astack_ptr-3];
+                    a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    b  = astack[astack_ptr-3];
+                    alstack_ptr -= 1;
+                    break;
+                case 101: // 1100101 a-av b-av a-heap b-stack r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    b  = astack[astack_ptr-3];
+                    alstack_ptr -= 1;
+                    astack_ptr -= 3;
+                    break;
+                case 102: // 1100110 a-av b-av a-heap b-heap r-stack
+                    res = astack[astack_ptr];
+                    a = GET_HEAP_PTR(alstack_ptr-2) + 3*i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    astack_ptr += 3;
+                    alstack_ptr -= 2;
+                    break;
+                case 103: // 1100111 a-av b-av a-heap b-heap r-heap
+                    res = c_target + 3*i * CHUNK_SIZE;
+                    a = GET_HEAP_PTR(alstack_ptr-2) + 3*i * CHUNK_SIZE;
+                    b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
+                    alstack_ptr -= 2;
+                    break;
 
+                default:
+                    INVALID;
+                }
 
+                if (alstack_ptr >= STACK_DEPTH ||
+                    astack_ptr >= STACK_DEPTH) {
+                    PyErr_SetString(PyExc_ValueError, "Stack overflow.");
+                    return NULL;
                 }
 
                 //printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
