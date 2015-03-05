@@ -4,7 +4,7 @@ from numpy.distutils.misc_util import Configuration
 def configuration(parent_package='', top_path=None):
     config = Configuration('aeev', parent_package, top_path)
     config.add_extension("aeev",
-                          sources=["aeev.c"],
+                          sources=["aeev.c", "makeop.h"],
                           include_dirs=['.'])
 
     return config

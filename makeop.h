@@ -115,7 +115,7 @@ case AV_V_##base_name: {\
   for (k=0; k<chunk; k++) {\
     res[k*3  ] = a[k*3  ] oper dstack[dstack_ptr-3];\
     res[k*3+1] = a[k*3+1] oper dstack[dstack_ptr-2];\
-    res[k*3+2] = a[k*3+2] oper dstack[dstack_ptr-2];\
+    res[k*3+2] = a[k*3+2] oper dstack[dstack_ptr-1];\
   }\
   dstack_ptr -= 3;\
   break;\

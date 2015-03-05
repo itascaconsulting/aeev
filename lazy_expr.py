@@ -31,7 +31,7 @@ def dis(expr):
             o = o & ~bytecode_mask
             print "{}:  array vector load {} (id: {})".format(i,o,id(arrays[o]))
         elif (o &~ heap_mask) in op_hash:
-            template = "{}:  {} types({} <- {}.{}) flags:  {}{}{}"
+            template = "{}:  {} types({} <- {} op {}) flags:  {}{}{}"
             out = template.format(i, op_hash[o &~ heap_mask],
                                   r_stype(o), a_stype(o), b_stype(o),
                                   "r-heap " if r_heap(o) else "",

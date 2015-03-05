@@ -187,7 +187,7 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 double *a = 0; // left
                 double *b = 0; // right
                 int case_code=0;
-                // adapter for testing
+                // adapter for testing -- refactor bit order?
                 if ((op & A_AV) == A_AV) case_code      |= 1 << 6;
                 else if (op & A_AS) case_code           |= 1 << 4;
                 if ((op & B_AV) == B_AV) case_code      |= 1 << 5;
@@ -344,11 +344,12 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 
                 case  48: // 0110000 a-as, b-av, a-stack, b-stack, r-stack
                     res = astack[astack_ptr-4];
-                    a = astack[astack_ptr-4];
+                    for (k=0; k<chunk; k++) { // copy a to bottom of stack
+                        astack[astack_ptr][k] = astack[astack_ptr-4][k];
+                    }
+                    a = astack[astack_ptr];
                     b = astack[astack_ptr-3];
                     astack_ptr -= 1;
-                    PyErr_SetString(PyExc_ValueError, "Stack corrupt (0).");
-                    return NULL;
                     break;
                 case  49: // 0110001  a-as, b-av, a-stack, b-stack, r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
@@ -358,14 +359,13 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     break;
                 case  50: // 0110010  a-as, b-av, a-stack, b-heap, r-stack
                     res = astack[astack_ptr-1];
-                    a = astack[astack_ptr-1];
+                    for (k=0; k<chunk; k++) { // copy a to bottom of stack
+                        astack[astack_ptr+2][k] = astack[astack_ptr-1][k];
+                    }
+                    a = astack[astack_ptr+2];
                     b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
                     alstack_ptr--;
                     astack_ptr+=2;
-                    PyErr_SetString(PyExc_ValueError, "Stack corrupt (1).");
-                    return NULL;
-                    // #fail corrupts stack! need to make a copy of a
-                    // can do it here
                     break;
                 case  51: // 0110011  a-as, b-av, a-stack, b-heap, r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
@@ -374,7 +374,6 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     alstack_ptr--;
                     astack_ptr--;
                     break;
-
                 case  52: // 0110100 a-as, b-av, a-heap, b-stack, r-stack
                     res = astack[astack_ptr-3];
                     a = GET_HEAP_PTR(alstack_ptr-1) + i * CHUNK_SIZE;
@@ -465,12 +464,12 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 case  76: // 1001100 a-av b-as a-heap b-stack r-stack
                     res = astack[astack_ptr-1];
                     a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
-                    b = astack[astack_ptr-1];
+                    for (k=0; k<chunk; k++) {
+                        astack[astack_ptr+2][k] = astack[astack_ptr-1][k];
+                    }
+                    b = astack[astack_ptr+2];
                     alstack_ptr--;
                     astack_ptr += 2;
-                    PyErr_SetString(PyExc_ValueError, "Stack corrupt (2).");
-                    return NULL;
-                    // danger overwrite here -- copy b -- see case 50
                     break;
                 case  77: // 1001101 a-av b-as a-heap b-stack r-heap
                     res = c_target + 3*i * CHUNK_SIZE;
@@ -584,10 +583,19 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 case AS_AS_POW:
                     for (k=0; k<chunk; k++) {res[k] = pow(a[k], b[k]);}
                     break;
-
                 case AS_S_POW:
-                    for (k=0; k<chunk; k++) {
-                        res[k] = pow(a[k], dstack[dstack_ptr-1]);
+                    if (dstack[dstack_ptr-1] == 2.0) {
+                        for (k=0; k<chunk; k++) {
+                            res[k] = a[k] * a[k];
+                        }
+                    } else if (dstack[dstack_ptr-1] == 3.0) {
+                        for (k=0; k<chunk; k++) {
+                            res[k] = a[k] * a[k] * a[k];
+                        }
+                    } else {
+                        for (k=0; k<chunk; k++) {
+                            res[k] = pow(a[k], dstack[dstack_ptr-1]);
+                        }
                     }
                     dstack_ptr--;
                     break;
@@ -600,6 +608,33 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                 case S_S_POW:
                     dstack[dstack_ptr-2] = pow(dstack[dstack_ptr-2],
                                                dstack[dstack_ptr-1]);
+                    dstack_ptr--;
+                    break;
+
+                case V_S_POW:
+                    dstack[dstack_ptr-4] = pow(dstack[dstack_ptr-4],
+                                               dstack[dstack_ptr-1]);
+                    dstack[dstack_ptr-3] = pow(dstack[dstack_ptr-3],
+                                               dstack[dstack_ptr-1]);
+                    dstack[dstack_ptr-2] = pow(dstack[dstack_ptr-2],
+                                               dstack[dstack_ptr-1]);
+                    dstack_ptr--;
+                    break;
+
+                case AV_S_POW:
+                    if (dstack[dstack_ptr-1]==2.0) {
+                        for (k=0; k<chunk; k++) {
+                            res[3*k]   = a[3*k]* a[3*k];
+                            res[3*k+1] = a[3*k+1]*a[3*k+1];
+                            res[3*k+2] = a[3*k+2] * a[3*k+2];
+                        }
+                    } else {
+                        for (k=0; k<chunk; k++) {
+                            res[3*k] = pow(a[3*k], dstack[dstack_ptr-1]);
+                            res[3*k+1] = pow(a[3*k+1], dstack[dstack_ptr-1]);
+                            res[3*k+2] = pow(a[3*k+2], dstack[dstack_ptr-1]);
+                        }
+                    }
                     dstack_ptr--;
                     break;
                 case S_NEGATE:
