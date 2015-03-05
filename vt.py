@@ -22,3 +22,5 @@ print aeev.vm_eval(tuple(op), tuple(l))
 expr = target == -b
 dis(expr)
 print expr.vm_eval()
+
+(target == b+1).vm_eval()
