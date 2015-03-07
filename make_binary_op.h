@@ -1,4 +1,4 @@
-#define OPERATOR(base_name, oper)\
+#define BINARY_OPERATOR(base_name, oper)\
 \
 case S_S_##base_name: {\
   dstack[dstack_ptr-2] = dstack[dstack_ptr-2] oper dstack[dstack_ptr-1];\

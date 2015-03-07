@@ -51,3 +51,11 @@ np.testing.assert_allclose(expr.vm_eval(), (_c.T * (_e+_f) * (_d.T-_e)**2).T)
 np.testing.assert_allclose((starget==e**2).vm_eval(), _e**2)
 
 # array shape checking!!
+
+expr = target==g*(e*((c+d)**2 + (0.1*c-d*10)) +  f*((c-d)**2 + (0.5*c-d*12)))
+
+# glitch in vec * np array
+def t():
+    return (_e*((_c.T+_d.T)**2 + (0.1*_c.T-_d.T*10)) +  _f*((_c.T-_d.T)**2 + (0.5*_c.T-_d.T*12))).T*_g
+
+np.testing.assert_allclose(expr.vm_eval(),t())

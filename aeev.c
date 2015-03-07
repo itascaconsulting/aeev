@@ -92,8 +92,8 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
 #define CHUNK_SIZE 256
 #define GET_HEAP_PTR(arg) (double *) PyArray_DATA((PyArrayObject *) PyTuple_GET_ITEM(array_literals, alstack[arg]))
 #define INVALID PyErr_SetString(PyExc_ValueError, "invalid bytecode"); return NULL;
-#define STACK_DEPTH 12
-#include "makeop.h"
+#define STACK_DEPTH 33
+#include "make_binary_op.h"
 static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 {
     PyObject *opcodes=0;
@@ -328,19 +328,19 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     b = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
                     alstack_ptr--;
                     break;
-                case  36: // 0100100 a-s, b-av, a-heap, b-stack, r-stack
-                case  37: // 0100101 a-s, b-av, a-heap, b-stack, r-heap
-                case  38: // 0100110 a-s, b-av, a-heap, b-heap, r-stack
-                case  39: // 0100111 a-s, b-av, a-heap, b-heap, r-heap
-                case  40: // 0101000 a-s, b-av
-                case  41: // 0101001
-                case  42: // 0101010
-                case  43: // 0101011
-                case  44: // 0101100
-                case  45: // 0101101
-                case  46: // 0101110
-                case  47: // 0101111
-                    INVALID;
+                /* case  36: // 0100100 a-s, b-av, a-heap, b-stack, r-stack */
+                /* case  37: // 0100101 a-s, b-av, a-heap, b-stack, r-heap */
+                /* case  38: // 0100110 a-s, b-av, a-heap, b-heap, r-stack */
+                /* case  39: // 0100111 a-s, b-av, a-heap, b-heap, r-heap */
+                /* case  40: // 0101000 a-s, b-av */
+                /* case  41: // 0101001 */
+                /* case  42: // 0101010 */
+                /* case  43: // 0101011 */
+                /* case  44: // 0101100 */
+                /* case  45: // 0101101 */
+                /* case  46: // 0101110 */
+                /* case  47: // 0101111 */
+                /*     INVALID; */
 
                 case  48: // 0110000 a-as, b-av, a-stack, b-stack, r-stack
                     res = astack[astack_ptr-4];
@@ -401,15 +401,15 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     alstack_ptr -= 2;
                     break;
 
-                case  56: // 0111000
-                case  57: // 0111001
-                case  58: // 0111010
-                case  59: // 0111011
-                case  60: // 0111100
-                case  61: // 0111101
-                case  62: // 0111110
-                case  63: // 0111111
-                    INVALID;
+                /* case  56: // 0111000 */
+                /* case  57: // 0111001 */
+                /* case  58: // 0111010 */
+                /* case  59: // 0111011 */
+                /* case  60: // 0111100 */
+                /* case  61: // 0111101 */
+                /* case  62: // 0111110 */
+                /* case  63: // 0111111 */
+                /*     INVALID; */
 
                 case  64: // 1000000 a-av b-s a-stack b-stack r-stack
                     res = astack[astack_ptr-3];
@@ -420,9 +420,9 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     a = astack[astack_ptr-3];
                     astack_ptr -= 3;
                     break;
-                case  66: // 1000010
-                case  67: // 1000011
-                    INVALID;
+                /* case  66: // 1000010 */
+                /* case  67: // 1000011 */
+                /*     INVALID; */
                 case  68: // 1000100 a-av, b-s, a-heap, r-stack
                     res = astack[astack_ptr];
                     a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
@@ -434,9 +434,9 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     a = GET_HEAP_PTR(alstack_ptr-1) + 3*i * CHUNK_SIZE;
                     alstack_ptr--;
                     break;
-                case  70: // 1000110
-                case  71: // 1000111
-                    INVALID;
+                /* case  70: // 1000110 */
+                /* case  71: // 1000111 */
+                /*     INVALID; */
                 case  72: // 1001000 a-av b-as a-stack b-stack r-stack
                     res = astack[astack_ptr-4];
                     a = astack[astack_ptr-4];
@@ -492,23 +492,23 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
                     alstack_ptr -= 2;
                     break;
 
-                case  80: // 1010000
-                case  81: // 1010001
-                case  82: // 1010010
-                case  83: // 1010011
-                case  84: // 1010100
-                case  85: // 1010101
-                case  86: // 1010110
-                case  87: // 1010111
-                case  88: // 1011000
-                case  89: // 1011001
-                case  90: // 1011010
-                case  91: // 1011011
-                case  92: // 1011100
-                case  93: // 1011101
-                case  94: // 1011110
-                case  95: // 1011111
-                    INVALID;
+                /* case  80: // 1010000 */
+                /* case  81: // 1010001 */
+                /* case  82: // 1010010 */
+                /* case  83: // 1010011 */
+                /* case  84: // 1010100 */
+                /* case  85: // 1010101 */
+                /* case  86: // 1010110 */
+                /* case  87: // 1010111 */
+                /* case  88: // 1011000 */
+                /* case  89: // 1011001 */
+                /* case  90: // 1011010 */
+                /* case  91: // 1011011 */
+                /* case  92: // 1011100 */
+                /* case  93: // 1011101 */
+                /* case  94: // 1011110 */
+                /* case  95: // 1011111 */
+                /*     INVALID; */
 
 // a-av b-av a-as b-as a-heap b-heap r-heap
                 case  96: // 1100000 a-av b-av a-stack b-stack r-stack
@@ -575,10 +575,10 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
 
                 //printf("opcode %i %i %i\n", op, op &~BYTECODE_MASK, case_code);
                 switch (op & ~HEAP_MASK) {
-                    OPERATOR(ADD, +);
-                    OPERATOR(SUB, -);
-                    OPERATOR(MUL, *);
-                    OPERATOR(DIV, /);
+                    BINARY_OPERATOR(ADD, +);
+                    BINARY_OPERATOR(SUB, -);
+                    BINARY_OPERATOR(MUL, *);
+                    BINARY_OPERATOR(DIV, /);
 
                 case AS_AS_POW:
                     for (k=0; k<chunk; k++) {res[k] = pow(a[k], b[k]);}
