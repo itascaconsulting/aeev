@@ -132,7 +132,7 @@ int process_chunk(int i, int chunk, int nops, double *c_double_literals,
             double *b = 0; // right
             int case_code=0;
             // adapter for testing -- refactor bit order?
-            // a-av b-av a-as b-as a-heap b-heap r-heap
+            // bits: (a-av, b-av, a-as, b-as, a-heap, b-heap, r-heap)
             // this 7 bit int describes the types and if the
             // operands and result are on the stack or heap.
             if ((op & A_AV) == A_AV) case_code      |= 1 << 6;
@@ -663,15 +663,14 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     }
 
     c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (i=0; i<outside_loops+1; i++) {
-
         int chunk = CHUNK_SIZE;
         if (i==outside_loops)
             chunk = final_chunk;
         if (! process_chunk(i,chunk, nops, c_double_literals,
                             c_target, c_opcodes, array_literals)
-            ) return NULL;
+            );
     }
     // what to do if this in not an array expression??
     Py_RETURN_NONE;
