@@ -90,11 +90,30 @@ op_hash = {
     op_counter(r_v | a_v) : "v_negate",
     op_counter(r_as | a_as) : "as_negate",
     op_counter(r_av | a_av) : "av_negate",
-# unary functions
+
+# vector unary functions
     op_counter(r_s | a_v) : "v_mag",
     op_counter(r_v | a_v) : "v_norm",
     op_counter(r_as | a_av) : "av_mag",
     op_counter(r_av | a_av) : "av_norm",
+
+# scalar unary functions
+    op_counter(r_s | a_s) : "s_log",
+    op_counter(r_as | a_as) : "as_log",
+    op_counter(r_s | a_s) : "s_exp",
+    op_counter(r_as | a_as) : "as_exp",
+
+    # op_counter(r_s | a_s) : "sin",
+    # op_counter(r_s | a_s) : "cos",
+    # op_counter(r_s | a_s) : "tan",
+    # op_counter(r_s | a_s) : "abs",
+
+# scalar binary functions
+    op_counter(r_s | a_s | b_s) : "s_max",
+
+# scalar proxy
+    op_counter(r_as) : "proxy_rad",
+
 }
 
 

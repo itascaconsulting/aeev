@@ -31,6 +31,9 @@ double eval_double(PyObject *cell, int index)
     case AS_NEGATE: case S_NEGATE:
         return -eval_double(PyTuple_GET_ITEM(cell, 1), index);
 
+    case S_EXP:
+        return exp(eval_double(PyTuple_GET_ITEM(cell, 1), index));
+
     case LIT_S:
         return PyFloat_AS_DOUBLE(PyTuple_GET_ITEM(cell, 1));
 
@@ -94,6 +97,7 @@ static PyObject *array_eval(PyObject *self, PyObject *args)
 #define INVALID PyErr_SetString(PyExc_ValueError, "invalid bytecode"); return 0;
 #define STACK_DEPTH 33
 #include "make_binary_op.h"
+#include "make_unary_function.h"
 
 int process_chunk(int i, int chunk, int nops, double *c_double_literals,
                   double *c_target, long *c_opcodes, PyObject *array_literals) {
@@ -518,6 +522,7 @@ int process_chunk(int i, int chunk, int nops, double *c_double_literals,
                 BINARY_OPERATOR(SUB, -);
                 BINARY_OPERATOR(MUL, *);
                 BINARY_OPERATOR(DIV, /);
+                UNARY_S_FUNC(EXP, exp);
 
             case AS_AS_POW:
                 for (k=0; k<chunk; k++) {res[k] = pow(a[k], b[k]);}
@@ -604,7 +609,7 @@ int process_chunk(int i, int chunk, int nops, double *c_double_literals,
 
     if (!(alstack_ptr == 0) || !(astack_ptr == 0)) {
         PyErr_SetString(PyExc_ValueError, "stack corruption.");
-        return NULL;
+        return 0;
     }
     return 1;
 
@@ -741,7 +746,9 @@ static PyObject *vm_eval(PyObject *self, PyObject *args)
                     stack[stack_pointer-1];
                 stack_pointer -= 3;
                 break;
-
+            case S_EXP:
+                stack[stack_pointer-1] = exp(stack[stack_pointer-1]);
+                break;
             default:
                 PyErr_SetString(PyExc_ValueError,
                                 "unknown opcode");
@@ -780,7 +787,6 @@ static PyObject *call_test(PyObject *self, PyObject *args)
     data2 = (double *)ar2->data;
 
     size = PyArray_DIM(ar0,0);
-    #pragma omp parallel for
     for (i=0; i<size; i++) {
         data2[i] = data0[i] + data1[i];
     }

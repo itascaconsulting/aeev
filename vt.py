@@ -1,15 +1,15 @@
 import numpy as np
 from _vec import vec3 as vec
-from lazy_expr import lazy_expr, dis
+from Lazy import Lazy, dis
 from ops import *
 
 _a = vec((1,2,3))
 _b = np.array(((1,2,3.0),(4,5,6.0), (7,8,9.0), (10,11,12.)))
 _target  = np.zeros_like(_b)
 
-a = lazy_expr(_a)
-b = lazy_expr(_b)
-target = lazy_expr(_target)
+a = Lazy(_a)
+b = Lazy(_b)
+target = Lazy(_target)
 
 
 import aeev
@@ -41,7 +41,7 @@ _f = np.ones((1e6))*3
 _g = vec((4,5,6))
 _starget = np.zeros_like(_e)
 _target = np.zeros_like(_c)
-c,d,e,f,g,target,starget = map(lazy_expr, [_c,_d,_e,_f,_g,_target,_starget])
+c,d,e,f,g,target,starget = map(Lazy, [_c,_d,_e,_f,_g,_target,_starget])
 
 expr = target == c * (e+f) * (d-e)**2
 dis(expr)

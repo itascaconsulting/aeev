@@ -4,9 +4,20 @@ import numpy as np
 import aeev
 from _vec import vec3 as vec
 
+def handle_unary_function(basename, a):
+    lazy_a = Lazy(a)
+    a_type = lazy_a.r_code()
+    op_str = "{}_{}".format(string_types[a_type], basename)
+    assert op_str in rop_hash, "invalid operation"
+    op_code = rop_hash[op_str]
+    return Lazy((op_code, lazy_a))
+
+def exp(a): return handle_unary_function("exp", a)
+def log(a): return handle_unary_function("log", a)
+
 def dis(expr):
     """ Byte code and stack disassembler/pretty-printer"""
-    if type(expr) is lazy_expr:
+    if type(expr) is Lazy:
         opcodes, doubles, arrays = expr.get_bytecode()
     else:
         opcodes, doubles, arrays = expr.rhs.get_bytecode()
@@ -55,11 +66,11 @@ def dis(expr):
     for i,a in enumerate(arrays):
         print "{}:  shape: {} id: {}".format(i,a.shape, id(a))
 
-class Assignment(object):
-    "an expression which can be evaluated and assigned to a result"
+class LazyExpression(object):
+    "An expression which can be evaluated (lazily) and assigned somewhere"
     def __init__(self, lhs, rhs):
         assert type(lhs) is np.ndarray
-        assert type(rhs) is lazy_expr
+        assert type(rhs) is Lazy
         self.lhs = lhs
         self.rhs = rhs
         self.op_stack, self.literal_stack, self.array_stack = \
@@ -72,11 +83,11 @@ class Assignment(object):
         return self.lhs
 
     def __repr__(self):
-        return "Assignment lhs({}) \n=\nrhs({})".format(self.lhs,
+        return "LazyExpression lhs({}) \n=\nrhs({})".format(self.lhs,
                                                         self.rhs)
 
-class lazy_expr(object):
-    """Represents an ast node, an operator and at least one value"""
+class Lazy(object):
+    """A term in a lazy expression. (Formally, an ast node, an operator and at least one value)"""
 
     def handle_op(a, b, base_op):
         a_type = a.r_code()
@@ -85,12 +96,12 @@ class lazy_expr(object):
                                    base_op)
         assert op_str in rop_hash, "invalid operation"
         op_code = rop_hash[op_str]
-        return lazy_expr((op_code, a, b))
+        return Lazy((op_code, a, b))
 
     def __init__(self, data):
-        if type(data) is tuple:
+        if type(data) is tuple and type(data[0]) is int and data[0] in op_hash:
             self.data = data
-        elif type(data) is lazy_expr:
+        elif type(data) is Lazy:
             self.data = data.data
         elif type(data) is float or type(data) is int:
             self.data = (lit_s, float(data))
@@ -104,7 +115,7 @@ class lazy_expr(object):
                 assert data.shape[1] == 3
                 self.data = (lit_av, data)
         else:
-            raise ValueError("unknown type")
+            raise ValueError("Cannot create lazy expression from this type.")
 
     def r_type(self):
         return (self.data[0] & r_type_mask) >> r_shift
@@ -123,54 +134,54 @@ class lazy_expr(object):
         raise NotImplementedError
 
     def __eq__(self, other):
-        rhs = lazy_expr(other)
+        rhs = Lazy(other)
         assert self.data[0] == lit_as or self.data[0] == lit_av, \
             "lhs must be an array"
         lhs = self.data[1]
         assert type(lhs) is np.ndarray
-        return Assignment(lhs, rhs)
+        return LazyExpression(lhs, rhs)
 
     def __add__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), "add")
+        return Lazy.handle_op(self, Lazy(other), "add")
     def __radd__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, "add")
+        return Lazy.handle_op(Lazy(other), self, "add")
 
     def __sub__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), "sub")
+        return Lazy.handle_op(self, Lazy(other), "sub")
     def __rsub__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, "sub")
+        return Lazy.handle_op(Lazy(other), self, "sub")
 
     def __mul__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), "mul")
+        return Lazy.handle_op(self, Lazy(other), "mul")
     def __rmul__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, "mul")
+        return Lazy.handle_op(Lazy(other), self, "mul")
 
     def __div__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), "div")
+        return Lazy.handle_op(self, Lazy(other), "div")
     def __rdiv__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, "div")
+        return Lazy.handle_op(Lazy(other), self, "div")
 
     def __pow__(self, other):
-        return lazy_expr.handle_op(self, lazy_expr(other), "pow")
+        return Lazy.handle_op(self, Lazy(other), "pow")
     def __rpow__(self, other):
-        return lazy_expr.handle_op(lazy_expr(other), self, "pow")
+        return Lazy.handle_op(Lazy(other), self, "pow")
 
     def __neg__(self):
         if self.r_type() == 0:
-            return lazy_expr((s_negate, self))
+            return Lazy((s_negate, self))
         elif self.r_type() == 1:
-            return lazy_expr((as_negate, self))
+            return Lazy((as_negate, self))
         elif self.r_type() == 2:
-            return lazy_expr((v_negate, self))
+            return Lazy((v_negate, self))
         elif self.r_type() == 3:
-            return lazy_expr((av_negate, self))
+            return Lazy((av_negate, self))
 
 
     def __repr__(self):
         return "({}, ".format(op_hash[self.data[0]]) +\
             ", ".join(map(str, self.data[1:])) +  " )"
 
-    def get_tuple(self):
+    def get_ast(self):
         """ return ast as nested tuples """
         if self.data[0] == lit_s or self.data[0] == lit_v:
             return self.data
@@ -179,11 +190,11 @@ class lazy_expr(object):
         else:
             if len(self.data) == 2:
                 return (self.data[0],
-                        self.data[1].get_tuple())
+                        self.data[1].get_ast())
             if len(self.data) == 3:
                 return (self.data[0],
-                        self.data[1].get_tuple(),
-                        self.data[2].get_tuple())
+                        self.data[1].get_ast(),
+                        self.data[2].get_ast())
 
     def get_bytecode(self):
         # for each operation involving an array
@@ -194,7 +205,7 @@ class lazy_expr(object):
             """Convert nested tuples into nested lists"""
             return list(map(listit, t)) if isinstance(t, (list, tuple)) else t
 
-        top_cell = listit(self.get_tuple())
+        top_cell = listit(self.get_ast())
 
         def scalar_op(opcode):
             return r_itype(opcode) == 0

@@ -1,15 +1,16 @@
-from lazy_expr import lazy_expr, dis
+from Lazy import Lazy, dis, exp
+from math import exp as _exp
 import numpy as np
 import aeev
 
-
-a=lazy_expr(1.0)
+_a = 1.0
+a = Lazy(1.0)
 _b = np.linspace(0,1,1e6)
-b=lazy_expr(_b)
+b = Lazy(_b)
 _c = np.linspace(1,2,1e6)
-c=lazy_expr(_c)
+c = Lazy(_c)
 _target = np.zeros_like(_b)
-target = lazy_expr(_target)
+target = Lazy(_target)
 
 expr = target == b+c
 dis(expr)
@@ -37,3 +38,6 @@ np.testing.assert_allclose(expr.vm_eval(), -_b)
 
 expr = target == c * (1 + -b/c)
 np.testing.assert_allclose(expr.vm_eval(), _c*(1+-_b/_c))
+
+expr = target == exp(c)
+np.testing.assert_allclose(expr.vm_eval(), np.exp(_c))
