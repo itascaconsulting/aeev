@@ -112,8 +112,14 @@ op_hash = {
     op_counter(r_s | a_s | b_s) : "s_max",
 
 # scalar proxy
-    op_counter(r_as) : "proxy_rad",
+    op_counter(r_as) : "as_proxy",
+    op_counter(r_av) : "av_proxy",
 
+# proxy codes
+    op_counter() : "bp_rad",
+    op_counter() : "bp_pos",
+    op_counter() : "bp_vel",
+    op_counter() : "bp_force_app",
 }
 
 
