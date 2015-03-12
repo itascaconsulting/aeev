@@ -121,7 +121,7 @@ int process_chunk(int i, int chunk, int nops, double *c_double_literals,
             dstack_ptr++;
         }
         else if (((op &~ OP_MASK) == LIT_AS) ||
-                 ((op &~ OP_MASK) == LIT_AV) ) {
+                 ((op &~ OP_MASK) == LIT_AV)) {
             alstack[alstack_ptr] = op & ~BYTECODE_MASK;
             alstack_ptr++;
         }
@@ -780,6 +780,7 @@ static PyObject *call_test(PyObject *self, PyObject *args)
     data2 = (double *)ar2->data;
 
     size = PyArray_DIM(ar0,0);
+    #pragma omp parallel for
     for (i=0; i<size; i++) {
         data2[i] = data0[i] + data1[i];
     }
@@ -787,8 +788,6 @@ static PyObject *call_test(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
-
-// Module functions table.
 static PyMethodDef
 module_functions[] = {
     { "eval", eval, METH_VARARGS, "AST walking interpreter" },
@@ -800,8 +799,6 @@ module_functions[] = {
     { "call_test", call_test, METH_VARARGS, "test entry point" },
     { NULL }
 };
-
-// This function is called to initialize the module.
 
 void
 initaeev(void)
