@@ -11,14 +11,6 @@ a = Lazy(_a)
 b = Lazy(_b)
 target = Lazy(_target)
 
-
-import aeev
-expr = ((a+1)+vec((11,12,13)))
-#dis(expr)
-op, l, _ = expr.get_bytecode()
-print aeev.vm_eval(tuple(op), tuple(l))
-((_a+1)+vec((11,12,13))).assert_close(aeev.vm_eval(tuple(op), tuple(l)))
-
 expr = target == -b
 dis(expr)
 print expr.vm_eval()

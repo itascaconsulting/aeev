@@ -1,5 +1,4 @@
 from ops import *
-import array
 import numpy as np
 import aeev
 from _vec import vec3 as vec

@@ -3,95 +3,6 @@
 #include "stdio.h"
 #include "ops.h"
 
-double eval_double(PyObject *cell, int index)
-{
-    int op_code = PyInt_AS_LONG(PyTuple_GET_ITEM(cell,0));
-    switch (op_code){
-
-    case AS_AS_ADD: case AS_S_ADD: case S_AS_ADD: case S_S_ADD:
-        return eval_double(PyTuple_GET_ITEM(cell, 1), index) +
-               eval_double(PyTuple_GET_ITEM(cell, 2), index);
-
-    case AS_AS_SUB: case AS_S_SUB: case S_AS_SUB: case S_S_SUB:
-        return eval_double(PyTuple_GET_ITEM(cell, 1), index) -
-               eval_double(PyTuple_GET_ITEM(cell, 2), index);
-
-    case AS_AS_MUL: case AS_S_MUL: case S_AS_MUL: case S_S_MUL:
-        return eval_double(PyTuple_GET_ITEM(cell, 1), index) *
-               eval_double(PyTuple_GET_ITEM(cell, 2), index);
-
-    case AS_AS_DIV: case AS_S_DIV: case S_AS_DIV: case S_S_DIV:
-        return eval_double(PyTuple_GET_ITEM(cell, 1), index) /
-               eval_double(PyTuple_GET_ITEM(cell, 2), index);
-
-    case AS_AS_POW: case AS_S_POW: case S_AS_POW: case S_S_POW:
-        return pow(eval_double(PyTuple_GET_ITEM(cell, 1), index),
-                   eval_double(PyTuple_GET_ITEM(cell, 2), index));
-
-    case AS_NEGATE: case S_NEGATE:
-        return -eval_double(PyTuple_GET_ITEM(cell, 1), index);
-
-    case S_EXP:
-        return exp(eval_double(PyTuple_GET_ITEM(cell, 1), index));
-
-    case LIT_S:
-        return PyFloat_AS_DOUBLE(PyTuple_GET_ITEM(cell, 1));
-
-    case LIT_AS:
-        return ((double *)((PyArrayObject *)
-                           PyTuple_GET_ITEM(cell, 1))->data)[index];
-
-    default:
-        printf("got %i \n", op_code);
-        PyErr_SetString(PyExc_ValueError, "unknown opcode");
-        return 0.0;
-    }
-}
-
-static PyObject *eval(PyObject *self, PyObject *args)
-{
-    // input is a tuple (opcode)
-    PyObject *cell=0;
-    if (!PyArg_ParseTuple(args, "O", &cell))
-        return NULL;
-    if (!PyTuple_Check(cell)) {
-        PyErr_SetString(PyExc_ValueError,
-                        "expected tuple");
-        return NULL;
-    }
-    return PyFloat_FromDouble(eval_double(cell, 0));
-}
-
-static PyObject *array_eval(PyObject *self, PyObject *args)
-{
-    // input is a tuple (opcode)
-    PyObject *cell=0;
-    PyObject *target=0;
-    int size=0;
-    int i=0;
-    PyArrayObject *ar;
-    if (!PyArg_ParseTuple(args, "OO", &cell, &target))
-        return NULL;
-    ar = (PyArrayObject *)PyArray_FROMANY(target,
-                                          PyArray_DOUBLE,
-                                          1,
-                                          2,
-                                          NPY_IN_ARRAY);
-    if (! ar) {
-        PyErr_SetString(PyExc_ValueError, "target array error");
-        return NULL;
-    }
-    if (!PyTuple_Check(cell)) {
-        PyErr_SetString(PyExc_ValueError, "expected tuple");
-        return NULL;
-    }
-    size = PyArray_DIM(ar,0);
-    for (i=0; i<size; i++){
-        ((double *)ar->data)[i] = eval_double(cell, i);
-    }
-    Py_RETURN_NONE;
-}
-
 #define CHUNK_SIZE 256
 #define GET_HEAP_PTR(arg) (double *) PyArray_DATA((PyArrayObject *) PyTuple_GET_ITEM(array_literals, alstack[arg]))
 #define INVALID PyErr_SetString(PyExc_ValueError, "invalid bytecode"); return 0;
@@ -668,99 +579,17 @@ static PyObject *array_vm_eval(PyObject *self, PyObject *args)
     }
 
     c_double_literals = (double *)PyArray_DATA((PyArrayObject *) double_literals);
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (i=0; i<outside_loops+1; i++) {
         int chunk = CHUNK_SIZE;
         if (i==outside_loops)
             chunk = final_chunk;
-        if (! process_chunk(i,chunk, nops, c_double_literals,
-                            c_target, c_opcodes, array_literals)
-            );
+        if (! process_chunk(i, chunk, nops, c_double_literals,
+                            c_target, c_opcodes, array_literals))return NULL;
     }
     // what to do if this in not an array expression??
     Py_RETURN_NONE;
 }
-
-static PyObject *vm_eval(PyObject *self, PyObject *args)
-{
-    // input is a tuple (opcode)
-    PyObject *ops=0;
-    PyObject *literals=0;
-    int c_op=0;
-    int n_opt=0;
-    int stack_pointer = 0; // points to available stack location
-    double stack[32];
-    int i;
-
-    if (!PyArg_ParseTuple(args, "OO", &ops, &literals))
-        return NULL;
-    if (! (PyTuple_Check(ops) && PyTuple_Check(literals)))
-        return NULL;
-    n_opt = PyTuple_GET_SIZE(ops);
-    for (i=0; i<n_opt; i++) {
-        c_op = PyInt_AS_LONG(PyTuple_GET_ITEM(ops, i));
-        if ((c_op &~ OP_MASK) == LIT_S) {
-            stack[stack_pointer] = PyFloat_AS_DOUBLE(
-                PyTuple_GET_ITEM(literals, c_op & ~BYTECODE_MASK));
-            stack_pointer++;
-        }
-        else if ((c_op &~ OP_MASK) == LIT_V) {
-            stack[stack_pointer] = PyFloat_AS_DOUBLE(
-                PyTuple_GET_ITEM(literals, c_op & ~BYTECODE_MASK));
-            stack_pointer++;
-            stack[stack_pointer] = PyFloat_AS_DOUBLE(
-                PyTuple_GET_ITEM(literals, (c_op & ~BYTECODE_MASK)+1));
-            stack_pointer++;
-            stack[stack_pointer] = PyFloat_AS_DOUBLE(
-                PyTuple_GET_ITEM(literals, (c_op & ~BYTECODE_MASK)+2));
-            stack_pointer++;
-        }
-        else {
-            switch (c_op) {
-            case AS_AS_ADD: case AS_S_ADD: case S_AS_ADD: case S_S_ADD:
-                stack[stack_pointer-2] = stack[stack_pointer-2] +
-                                         stack[stack_pointer-1];
-                stack_pointer--;
-                break;
-            case AS_AS_POW: case AS_S_POW: case S_AS_POW: case S_S_POW:
-                stack[stack_pointer-2] = pow(stack[stack_pointer-2],
-                                             stack[stack_pointer-1]);
-                stack_pointer--;
-                break;
-            case V_S_ADD:
-                stack[stack_pointer-4] = stack[stack_pointer-4] + \
-                    stack[stack_pointer-1];
-                stack[stack_pointer-3] = stack[stack_pointer-3] + \
-                    stack[stack_pointer-1];
-                stack[stack_pointer-2] = stack[stack_pointer-2] + \
-                    stack[stack_pointer-1];
-                stack_pointer--;
-                break;
-
-            case V_V_ADD:
-                stack[stack_pointer-6] = stack[stack_pointer-6] + \
-                    stack[stack_pointer-3];
-                stack[stack_pointer-5] = stack[stack_pointer-5] + \
-                    stack[stack_pointer-2];
-                stack[stack_pointer-4] = stack[stack_pointer-4] + \
-                    stack[stack_pointer-1];
-                stack_pointer -= 3;
-                break;
-            case S_EXP:
-                stack[stack_pointer-1] = exp(stack[stack_pointer-1]);
-                break;
-            default:
-                PyErr_SetString(PyExc_ValueError,
-                                "unknown opcode");
-                return NULL;
-            }
-        }
-    }
-    if (PyInt_AS_LONG(PyTuple_GET_ITEM(ops, 0)) & R_V)
-        return Py_BuildValue("(ddd)", stack[0], stack[1], stack[2]);
-    return PyFloat_FromDouble(stack[0]);
-}
-
 
 static PyObject *call_test(PyObject *self, PyObject *args)
 {
@@ -796,10 +625,6 @@ static PyObject *call_test(PyObject *self, PyObject *args)
 
 static PyMethodDef
 module_functions[] = {
-    { "eval", eval, METH_VARARGS, "AST walking interpreter" },
-    { "array_eval", array_eval, METH_VARARGS,
-      "Array capable AST walking interpreter" },
-    { "vm_eval", vm_eval, METH_VARARGS, "Virtual machine evaluator" },
     { "array_vm_eval", array_vm_eval, METH_VARARGS,
       "Array capable VM evaluator" },
     { "call_test", call_test, METH_VARARGS, "test entry point" },
