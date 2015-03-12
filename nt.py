@@ -1,7 +1,7 @@
 from Lazy import Lazy, dis, exp
 from math import exp as _exp
 import numpy as np
-import aeev
+#import aeev
 
 _a = 1.0
 a = Lazy(1.0)

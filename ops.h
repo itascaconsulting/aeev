@@ -27,6 +27,7 @@
 #define S_AV_DIV 3932240
 #define LIT_S 1073741824
 #define AV_AS_SUB 14417978
+#define AS_AS_MUL 5505090
 #define LIT_AV 135004160
 #define LIT_AS 537133056
 #define AV_AV_DIV 16515164
@@ -75,7 +76,7 @@
 #define AV_AV_POW 16515180
 #define V_AS_POW 10223718
 #define AS_AS_SUB 5505074
-#define AS_AS_MUL 5505090
+#define PROXY_BIT 131072
 #define S_AV_SUB 3932208
 #define R_AV 786432
 #define BP_FORCE_APP 28
@@ -90,6 +91,7 @@
 #define AV_S_DIV 13369433
 #define V_TYPE 2
 #define AS_S_ADD 4456481
+#define PROXY_SHIFT 17
 #define S_AV_ADD 3932192
 #define V_S_SUB 8912949
 #define B_S 0
@@ -104,7 +106,7 @@
 #define S_NEGATE 10
 #define A_SHIFT 22
 #define S_V_POW 2621535
-#define OP_MASK -2147221505
+#define OP_MASK -2147352577
 #define AS_AS_DIV 5505106
 #define AV_V_SUB 15466555
 #define AV_LOAD 134217728
@@ -132,6 +134,6 @@
 #define AS_TYPE 1
 #define V_LOAD 268435456
 #define BP_POS 26
-#define BYTECODE_MASK 2147221504
+#define BYTECODE_MASK 2147352576
 #define AV_V_ADD 15466539
 #define V_NEGATE 8912907

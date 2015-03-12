@@ -12,6 +12,8 @@ av_type = 3  ## 11
 a_shift        = 22
 b_shift        = 20
 r_shift        = 18
+proxy_shift    = 17
+
 a_s  = s_type  << a_shift
 a_as = as_type << a_shift
 a_v  = v_type  << a_shift
@@ -37,8 +39,9 @@ b_on_heap      = 1 << 24
 a_type_mask    = 1 << 23 | 1 << 22
 b_type_mask    = 1 << 21 | 1 << 20
 r_type_mask    = 1 << 19 | 1 << 18
+proxy_bit      = 1 << proxy_shift
 
-bytecode_mask = reduce(operator.or_, [1<<i for i in range(18,31)])
+bytecode_mask = reduce(operator.or_, [1<<i for i in range(17,31)])
 op_mask = ~bytecode_mask
 heap_mask = 1 << 26 | 1 << 25 | 1 << 24
 
