@@ -14,6 +14,7 @@ def handle_unary_function(basename, a):
 
 def exp(a): return handle_unary_function("exp", a)
 def log(a): return handle_unary_function("log", a)
+def mag(a): return handle_unary_function("log", a)
 
 def dis(expr):
     """ Byte code and stack disassembler/pretty-printer"""

@@ -20,9 +20,6 @@ for i in range(10):
 target = Lazy(np.zeros(it.ball.count()))
 v_target = Lazy(np.zeros((it.ball.count(),3)))
 
-expr = bp.force_app == 0.5 * bp.rad**2 * bp.vel
-dis(expr)
-
 
 expr = target == bp.rad + 1
 dis(expr)
@@ -34,3 +31,8 @@ expr = v_target == bp.pos + bp.rad + 0.1
 dis(expr)
 expr.vm_eval()
 np.testing.assert_allclose(v_target.data[1], (ba.pos().T+ba.radius()+0.1).T)
+
+expr = bp.force_app == 0.5 * bp.rad**2 * (bp.vel+1)
+dis(expr)
+expr.vm_eval()
+np.testing.assert_allclose(ba.force_app(), 0.5*rad**2)

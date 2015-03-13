@@ -121,6 +121,9 @@ op_hash = {
 # proxy codes
     op_counter() : "bp_rad",
     op_counter() : "bp_pos",
+    op_counter() : "bp_pos_x",
+    op_counter() : "bp_pos_y",
+    op_counter() : "bp_pos_z",
     op_counter() : "bp_vel",
     op_counter() : "bp_force_app",
 }
