@@ -125,9 +125,13 @@ import bp
 import numpy as np
 import itasca.ballarray as ba
 
-fluid_vel = (bp.pos_x**2 + bp.pos_y**2)**0.5
-expr = bp.force_app == factor * bp.rad**2*(bp.vel - fluid_vel) * mag(bp.vel - fluid_vel)
+mask_notx = vec((1,0,1))
+mask_x = vec((0,1,0))
+#r_pos = (bp.pos_x**2 + bp.pos_y**2)**0.5
+r_pos = mag(bp.pos*mask_notx)
+fluid_vel = (r_pos-pipe_r)**2*mask_x
+rel = bp.vel-fluid_vel
+expr = bp.force_app == factor * bp.rad**2*(rel) * mag(rel)
 
 def aeev_test():
     expr.vm_eval()
-
