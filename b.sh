@@ -1,4 +1,4 @@
-touch aeev.c
+#touch aeev.c
 python ops.py
 python setup.py build
 rm aeev.pyd
