@@ -1,6 +1,6 @@
 import numpy as np
 from _vec import vec3 as vec
-from Lazy import Lazy, dis
+from Lazy import Lazy, dis, mag
 from ops import *
 
 _a = vec((1,2,3))
@@ -51,3 +51,14 @@ def t():
     return (_e*((_c.T+_d.T)**2 + (0.1*_c.T-_d.T*10)) +  _f*((_c.T-_d.T)**2 + (0.5*_c.T-_d.T*12))).T*_g
 
 np.testing.assert_allclose(expr.vm_eval(),t())
+
+
+expr = starget == mag(_d)
+np.testing.assert_allclose(expr.vm_eval(),
+                           np.sqrt(_d[:,0]**2 + _d[:,1]**2 + _d[:,2]**2))
+
+expr = target == g*e
+tmp = np.array([_g[0] * _e,
+                _g[1] * _e,
+                _g[2] * _e]).T
+np.testing.assert_allclose(expr.vm_eval(), tmp)

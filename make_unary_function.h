@@ -1,6 +1,6 @@
 #define UNARY_S_FUNC(base_name, func_name)                      \
 case S_##base_name: {                                           \
-  dstack[dstack_ptr-1] = func_name( dstack[dstack_ptr-1]);\
+  d_stack[p_d-1] = func_name( d_stack[p_d-1]);\
   break;\
 }\
 case AS_##base_name: {                                           \

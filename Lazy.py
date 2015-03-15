@@ -1,7 +1,11 @@
 from ops import *
 import numpy as np
 #from aeev import array_vm_eval
-from itasca.ballarray import _eval as array_vm_eval
+try:
+    from itasca.ballarray import _eval as array_vm_eval
+except:
+    from aeev import array_vm_eval
+
 from _vec import vec3 as vec
 
 def handle_unary_function(basename, a):
@@ -14,7 +18,7 @@ def handle_unary_function(basename, a):
 
 def exp(a): return handle_unary_function("exp", a)
 def log(a): return handle_unary_function("log", a)
-def mag(a): return handle_unary_function("log", a)
+def mag(a): return handle_unary_function("mag", a)
 
 def dis(expr):
     """ Byte code and stack disassembler/pretty-printer"""
