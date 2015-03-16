@@ -209,7 +209,7 @@ int process_chunk(int i, int chunk, int nops, double *c_double_literals,
         }
     }
 
-    if (!(p_al == 0) || !(p_as == 0)) {
+    if (!(p_al == 0) || !(p_as == 0) || !(p_av==0)) {
         PyErr_SetString(PyExc_ValueError, "stack corruption.");
         return 0;
     }
