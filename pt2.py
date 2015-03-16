@@ -135,3 +135,9 @@ expr = bp.force_app == factor * bp.rad**2*(rel) * mag(rel)
 
 def aeev_test():
     expr.vm_eval()
+    
+ba.set_force_app(np.zeros((it.ball.count(),3)))
+aeev_test()
+v0 = ba.force_app()
+numpy_force()
+np.testing.assert_allclose(v0, ba.force_app())
