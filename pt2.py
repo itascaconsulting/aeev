@@ -125,8 +125,8 @@ import bp
 import numpy as np
 import itasca.ballarray as ba
 
-mask_notx = vec((1,0,1))
-mask_x = vec((0,1,0))
+mask_notx = vec((0,1,1))
+mask_x = vec((1,0,0))
 #r_pos = (bp.pos_x**2 + bp.pos_y**2)**0.5
 r_pos = mag(bp.pos*mask_notx)
 fluid_vel = (r_pos-pipe_r)**2*mask_x
